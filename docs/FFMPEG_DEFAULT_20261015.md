@@ -1,6 +1,8 @@
 # 默认 FFmpeg 接入记录
 
-日期：2026-10-15。本次将已经独立双构建验证的新 AAR 接入 KanTV 默认构建，并准备只含通用源码和可追溯二进制的 Git 历史。仓库继续私有；v53 APK、源码归档、家庭配置和稳定入口单独保留。本次不执行 NAS 发布或家庭应用安装。
+当前状态（2026-10-18）：[KanTV 源码](https://github.com/JaHandsome/KanTV)和 [FFmpeg r2 构建材料](https://github.com/JaHandsome/KanTV/releases/tag/ffmpeg-build-1.11.0-b37bf81-20261018)已公开，可匿名获取；不提供 APK。旧历史、v53 原件和家庭配置继续私有保留，家庭稳定入口未切换。新用户请先看 [构建与实例配置](CONFIGURATION.md)。
+
+以下记录保留 2026-10-15 接入和公开前复核的过程。其“私有阶段”等描述是当时状态，不代表当前仓库可见性。本次接入将已经独立双构建验证的新 AAR 接入 KanTV 默认构建，并准备只含通用源码和可追溯二进制的 Git 历史；不执行 NAS 发布或家庭应用安装。
 
 ## 2026-10-18 许可复核补正
 
@@ -12,7 +14,7 @@ Gradle Wrapper JAR 字节与官方 v7.4.2 一致，7.4/7.4.1/7.4.2 共用该 has
 
 默认文件为 `app/libs/media3-decoder-ffmpeg-1.11.0-ffmpeg6.0-b37bf81-repro.aar`，SHA256 为 `82024db102de0681cda9d0816c2d4edf660a2b15a2434d4bda00ba6a223a39b5`。Gradle 配置阶段读取 [来源清单](../app/libs/media3-ffmpeg-provenance.properties)，校验实际依赖文件；缺失或 hash 不同即失败。
 
-当前 r2 完整对应源码包 SHA256 为 `4b9b0e60597a82048b51567dac72967fa3dff356c7587bd10f03f935f61f8596`，包含固定源码、补丁、构建工具链与许可证记录、静态库、JNI object 和四 ABI 重链接材料。[构建材料 release](https://github.com/JaHandsome/KanTV/releases/tag/ffmpeg-build-1.11.0-b37bf81-20261018) 的地址固定在来源清单中，私有阶段仅仓库读者可以下载。该材料 release 不包含 APK。
+当前 r2 完整对应源码包 SHA256 为 `4b9b0e60597a82048b51567dac72967fa3dff356c7587bd10f03f935f61f8596`，包含固定源码、补丁、构建工具链与许可证记录、静态库、JNI object 和四 ABI 重链接材料。[构建材料 release](https://github.com/JaHandsome/KanTV/releases/tag/ffmpeg-build-1.11.0-b37bf81-20261018) 的地址固定在来源清单中，现已支持匿名下载。该材料 release 不包含 APK。
 
 固定 Media3 提交 `2bc207851df311340767e913931ca7b28cab1794`，FFmpeg 提交 `b37bf81a7a9782438e4fe06a249329e279694494`。四 ABI 与 AAC、AC3、EAC3、MP2、MP3 保持现有范围，不启用 GPL、version3 或 nonfree。此前双目录构建和原生重链接结果见 [独立候选记录](FFMPEG_REPRODUCIBLE_CANDIDATE_20261015.md)。
 
@@ -32,7 +34,7 @@ R8 测试把有限测试入口编入目标 APK，仅保留 Instrumentation 入�
 
 - 2026-10-15 的独立私有筹备仓库曾以 `008aa6a40e50d5bf850f06fce8e4076a9ee2d29b` 为根。2026-10-18 复核发现后续提交继承了个人邮箱，因此将该筹备对象图整体转入私有归档，并以完整许可、仅 GitHub noreply 身份的最终快照重新建立拟公开历史，不继承旧对象图。最终仓库须通过所有 refs 的旧 AAR 与提交邮箱门禁，并确认旧对象无法从新仓库取回。
 - [构建材料预发布](https://github.com/JaHandsome/KanTV/releases/tag/ffmpeg-build-1.11.0-b37bf81-20261018) 已上传 AAR、498,900,455 字节的完整对应源码包、来源清单和 SHA256SUMS。四个附件均实际重新下载并逐字节 SHA256 核对通过。r2 外层归档包含 78 个文件；原生库、object、源码归档等构建材料保留原字节，变动仅为许可、来源与修改告知。完整嵌套归档的敏感扫描已另行核查。
-- 此 release 为非草稿的 prerelease，不含 APK，不设为 latest；仓库 latest release 查询为 404。仓库可见性继续为 private。
+- 此 release 为非草稿的 prerelease，不含 APK，不设为 latest；仓库 latest release 查询为 404。此项准备验证时仓库仍为 private，后续已按用户授权公开通用源码与 r2，旧对象图仅私有保留。
 - v53 两个原始签名 APK、源码归档、归档清单、完成标记及四份基线记录复核未变化。未执行 NAS 写入或家庭稳定入口切换。
 
 CI 结果另见与当前提交关联的 GitHub Actions；完整本地命令、退出状态与合成运行证据保留在本机忽略目录，不上传现场或家庭资料。

@@ -2,6 +2,8 @@
 
 本配方构建来源明确的 FFmpeg 库，KanTV 默认依赖已接入其中完成验证的固定 AAR。`app/libs/media3-ffmpeg-provenance.properties` 绑定实际制品与对应源码包，Gradle 配置阶段会校验 AAR 的 SHA256，缺失或不匹配时构建失败。配方重建只输出到指定目录，不自动覆盖仓库制品；接入默认构建不改变家庭配置、稳定基线、NAS 或更新入口。通过双构建与合成音频检查仍不代表 5X 真实线路的持续播放与音画同步验收。
 
+KanTV 源码与 [r2 构建材料](https://github.com/JaHandsome/KanTV/releases/tag/ffmpeg-build-1.11.0-b37bf81-20261018) 已公开，可匿名下载。普通客户端构建按 [构建说明](../../docs/CONFIGURATION.md) 使用仓库内的 AAR，无需运行本配方。需要审查或复现库时，再下载 r2 完整对应源码；下载入口与校验步骤见 [r2 材料核验](../../docs/CONFIGURATION.md#ffmpeg-r2-材料核验)。当前不提供 APK。
+
 ## 固定输入与来源
 
 精确地址、提交、源码包 SHA256、工具版本、ABI 与 decoder 清单见 `pins.json`。
@@ -67,4 +69,4 @@ python3 relink.py --ndk "$ANDROID_HOME/ndk/28.2.13676358" --output relinked
 
 要完全重建分发包里的 AAR，可以把 `source-archives` 中的归档复制到新输出目录的 `downloads`，再运行配方；Gradle wrapper 和 recipe 已一并提供。完整包只包含本隔离库的源材料，不包含家庭播放列表、凭据或旧家庭历史。
 
-默认库的独立构建材料使用 release tag `ffmpeg-build-1.11.0-b37bf81-20261018`，下载地址和固定 SHA256 见来源清单。源包发布与下载校验另行记录；私有仓库阶段需要仓库访问权限。该材料 release 不包含家庭 APK，也不切换家庭稳定更新入口。默认库与私有旧库的隔离对照方式见 `VALIDATION.md`。
+默认库的独立构建材料使用 release tag `ffmpeg-build-1.11.0-b37bf81-20261018`，下载地址和固定 SHA256 见 [来源清单](../../app/libs/media3-ffmpeg-provenance.properties)。该预发布包含 AAR、r2 完整对应源码包、provenance 和 `SHA256SUMS` 四个附件，不包含 APK。源码包内文档保留打包时的阶段记录；后续仓库文档整理不会重打包或覆盖已核验的 r2 材料。默认库与私有旧库的隔离对照方式见 [验证说明](VALIDATION.md)。
