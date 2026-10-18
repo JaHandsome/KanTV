@@ -68,6 +68,14 @@ python3 tools/check_public_history.py
 
 服务端没有 pip 依赖；离线回归按 CI 使用 Python 3.12，TLS 回归需本机 `openssl`，Gecko 资源检查需 Node.js。Android 中依赖真实 Hub 载荷或外部 EPG 快照的检查需要另行提供输入。更多验证范围见 [构建说明](docs/CONFIGURATION.md#验证与故障排查)。
 
+安装并启动本机 Docker 后，还可运行内网源授权的完整合成验收；CI 的 `server-docker` 任务执行相同入口：
+
+```sh
+python3 server/tests/run_docker_private_sources.py
+```
+
+脚本覆盖默认拒绝、精确放行、撤销及容器重建后的持久化，使用独立配置和 Docker 资源。前提、证据与失败处理见 [Docker 自动验收](server/deploy/README.md#docker-内网源自动验收)。
+
 ## 项目结构与使用边界
 
 | 目录 | 内容 |

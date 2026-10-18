@@ -59,3 +59,15 @@ jobs:
           python3 -m unittest discover -s tools -p 'test_public*.py'
       - name: Server offline tests (runner Python 3.12, no pip dependencies)
         run: python3.12 server/tests/run_offline.py
+
+  server-docker:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Docker private-source acceptance
+        run: python3.12 server/tests/run_docker_private_sources.py --output-dir "${RUNNER_TEMP}/kantv-docker-private-sources"

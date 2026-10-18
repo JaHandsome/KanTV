@@ -208,3 +208,41 @@ python3 -m unittest discover -s server/tests -p test_public_config.py
 cd server
 docker compose config --quiet
 ```
+
+## Docker 内网源自动验收
+
+在 macOS / Linux 的 Git 检出目录中，准备 Python 3.11 或更新版本、已启动的本机 Docker 和 Compose v2 或更新版本，然后从仓库根目录执行：
+
+```sh
+python3 server/tests/run_docker_private_sources.py
+```
+
+这是一项联网构建、只使用合成媒体源的集成测试。首次运行需要 Docker daemon 能下载 `python:3.11-slim`。脚本只允许本机 Unix socket，拒绝 SSH/TCP 远端；请先选中自己的本机 Docker context，不要将 NAS 设置为本次测试目标。它不会部署到 NAS，也不构建或发布 APK。
+
+脚本只导出当前检出目录中已跟踪的公开 Docker 构建输入，再在新的工作目录使用原 Compose 文件及独立覆盖文件运行。测试配置由初始化器全新生成，不读取现有部署配置、令牌、来源或数据。每次创建唯一项目和镜像名，宿主 HTTP 端口只绑定随机回环端口，两个合成媒体服务不发布宿主端口；应用的默认授权仍为空，Hub 默认关闭。
+
+验收覆盖：
+
+- 默认空配置启动、真实 Docker 健康检查及回环绑定；配置测试频道和来源后，空授权仍拒绝抓取。
+- 精确授权协议、IP 和端口后，完成来源发现、HLS 主清单、相对子清单和分片验证，并检查 TXT/M3U 输出。
+- 拒绝错误 IP、端口、协议、域名借用授权及跨内网来源重定向；同来源重定向正常工作。
+- 按停止、删除授权、启动流程撤销，检查真实服务启动任务与新网络客户端都不再抓取；容器重建后，记录身份保留且撤销继续生效。
+- 非法授权拒绝启动，错误不回显配置值。撤销不会自动删除数据库、既有列表或客户端已持有的 URL。
+
+默认会创建唯一的临时证据目录，并在输出中打印其位置。也可以显式指定一个尚不存在的目录：
+
+```sh
+python3 server/tests/run_docker_private_sources.py --output-dir .scratch/docker-private-acceptance
+```
+
+重复执行时使用默认唯一目录，或为 `--output-dir` 换一个新目录；脚本拒绝覆盖已有目录。阶段结果、命令日志、退出状态和最终 `RESULT.json` 留在证据目录，只有全部检查和清理成功才写入 `COMPLETE` 并返回 0。失败时返回非零，控制台提供阶段和限量日志，便于在 CI 中定位。
+
+成功、失败及可处理的中断都会尝试清理本次唯一项目的容器、网络和镜像，不执行全局 prune，也不删除其他部署。若进程被强制杀死或 Docker daemon 失联，检查证据中的清理结果，再仅处理该次项目；不能据此清理同机其他资源。
+
+Docker Hub 下载失败时，可显式选择前文的官方镜像备用路径，不会自动切换镜像来源：
+
+```sh
+python3 server/tests/run_docker_private_sources.py --base-image public.ecr.aws/docker/library/python:3.11-slim
+```
+
+GitHub Actions 的 `server-docker` 任务在 Ubuntu 上执行相同脚本，使用只读仓库权限；日志属于合成验收，不上传 APK、创建 Release 或执行部署。这项测试验证本机 Docker 中的 IPv4/HTTP 合成流程，不代表家庭 NAS、IPv6/HTTPS 实网或真实电视播放验收。
