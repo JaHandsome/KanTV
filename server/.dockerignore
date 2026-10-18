@@ -10,6 +10,7 @@ app/**
 !tools/
 tools/**
 !tools/init_config.py
+!tools/renormalize_channels.py
 !config/
 config/**
 !config/settings.example.json

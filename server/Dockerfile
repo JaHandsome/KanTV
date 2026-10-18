@@ -3,7 +3,7 @@ ARG BASE_IMAGE=python:3.11-slim
 FROM ${BASE_IMAGE}
 WORKDIR /app
 COPY app/ ./app/
-COPY tools/init_config.py ./tools/init_config.py
+COPY tools/init_config.py tools/renormalize_channels.py ./tools/
 COPY config/settings.example.json ./config/settings.json
 RUN mkdir -p data/seed
 ENV PYTHONUNBUFFERED=1 \

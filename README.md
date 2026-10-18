@@ -26,7 +26,7 @@ cd KanTV
 
 ## 可选：部署自己的列表服务
 
-需要集中维护播放源时，准备 Python 3.11 或更新版本、Docker Engine 和 Docker Compose v2，在仓库根目录执行：
+需要集中维护播放源时，准备 Python 3.11 或更新版本、Docker Engine 和 Docker Compose v2 或更新版本，在仓库根目录执行：
 
 ```sh
 python3 server/tools/init_config.py --output server/runtime/config
@@ -36,7 +36,7 @@ docker compose up -d --build
 curl -fsS http://127.0.0.1:8420/healthz
 ```
 
-容器启动后再检查健康接口；若尚未就绪，用 `docker compose ps` 和 `docker compose logs --tail=100 iptv-nas` 查看状态。初始配置没有来源，空播放列表是正常结果。按 [服务端部署说明](server/deploy/README.md) 添加自己有权使用的来源，并显式配置局域网访问。随后在客户端导入 `http://你的服务地址:8420/live.txt` 即可使用；Hub 配对属于进阶选项。默认 Compose 只向宿主机回环地址映射端口，不适合直接映射公网。
+容器启动后再检查健康接口；若尚未就绪，用 `docker compose ps` 和 `docker compose logs --tail=100 iptv-nas` 查看状态。若 Docker Hub 基础镜像下载失败，见 [官方镜像备用路径](server/deploy/README.md#基础镜像下载失败)。初始配置没有来源和目标频道，空播放列表是正常结果。按 [服务端部署说明](server/deploy/README.md#添加自己有权使用的来源) 先配置目标频道，再添加自己有权使用的来源，并显式配置局域网访问。随后在客户端导入 `http://你的服务地址:8420/live.txt` 即可使用；Hub 配对属于进阶选项。默认 Compose 只向宿主机回环地址映射端口，不适合直接映射公网。
 
 ## FFmpeg r2 下载与来源
 
