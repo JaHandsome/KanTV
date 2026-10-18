@@ -1,0 +1,325 @@
+{
+  "repos": [
+    {
+      "repo": "Guovin/iptv-api",
+      "branch": "gd",
+      "path": "output/result.m3u",
+      "channel": "jsdelivr",
+      "enabled": true,
+      "note": "jsDelivr 实测校准 2026-09-08: 可达; 仓库已更名 Guovin/TV, 旧名 jsDelivr 仍兼容"
+    },
+    {
+      "repo": "suxuang/myIPTV",
+      "branch": "main",
+      "path": "ipv4.m3u",
+      "channel": "jsdelivr",
+      "enabled": true,
+      "note": "jsDelivr 实测校准 2026-05: 可达"
+    },
+    {
+      "repo": "suxuang/myIPTV",
+      "branch": "main",
+      "path": "ipv6.m3u",
+      "channel": "jsdelivr",
+      "enabled": true,
+      "note": "jsDelivr 实测校准 2026-05: 可达"
+    },
+    {
+      "repo": "vbskycn/iptv",
+      "branch": "master",
+      "path": "tv/iptv4.m3u",
+      "channel": "jsdelivr",
+      "enabled": true,
+      "note": "jsDelivr 实测校准 2026-05: 可达"
+    },
+    {
+      "repo": "vbskycn/iptv",
+      "branch": "master",
+      "path": "tv/iptv6.m3u",
+      "channel": "jsdelivr",
+      "enabled": true,
+      "note": "jsDelivr 实测校准 2026-09-08: 可达, 内容更新时间 2026-09-08"
+    },
+    {
+      "repo": "hujingguang/ChinaIPTV",
+      "branch": "main",
+      "path": "cnTV1_ALL.m3u8",
+      "channel": "jsdelivr",
+      "enabled": true,
+      "note": "jsDelivr 实测校准 2026-09-08: 可达, 2k stars 实时更新"
+    },
+    {
+      "repo": "best-fan/iptv-sources",
+      "branch": "main",
+      "path": "cn_all.m3u8",
+      "channel": "jsdelivr",
+      "enabled": true,
+      "note": "jsDelivr 实测校准 2026-09-08: 可达, Jenkins 每日构建(2026-09-08 04:27)"
+    },
+    {
+      "repo": "zhi35/iptv",
+      "branch": "master",
+      "path": "iptv.m3u",
+      "channel": "jsdelivr",
+      "enabled": true,
+      "note": "jsDelivr 实测校准 2026-09-08: 可达, 每日自动更新"
+    },
+    {
+      "repo": "CCSH/IPTV",
+      "branch": "main",
+      "path": "live.txt",
+      "channel": "jsdelivr",
+      "enabled": true,
+      "note": "jsDelivr 实测校准 2026-09-08: 可达 1.4MB(<2MB 拉取上限), 更新时间 2026-09-08 06:22"
+    },
+    {
+      "repo": "skddyj/iptv",
+      "branch": "main",
+      "path": "IPTV.m3u",
+      "channel": "jsdelivr",
+      "enabled": true,
+      "note": "jsDelivr 实测校准 2026-09-08: 可达, 411 stars"
+    },
+    {
+      "repo": "YueChan/Live",
+      "branch": "main",
+      "path": "IPTV.m3u",
+      "channel": "jsdelivr",
+      "enabled": true,
+      "note": "jsDelivr/ghproxy 双通道实测 2026-09-08: 均可达 36KB, 90 条央视/卫视高清(北京联通线路, 带 rtsp 回看参数); 用户指定收录"
+    },
+    {
+      "repo": "YueChan/Live",
+      "branch": "main",
+      "path": "GNTV.m3u",
+      "channel": "jsdelivr",
+      "enabled": true,
+      "note": "jsDelivr 实测 2026-09-08: 可达, 55 条港澳台频道(凤凰三台/中天/香港卫视), 利好港澳台分组"
+    },
+    {
+      "repo": "YueChan/Live",
+      "branch": "main",
+      "path": "Global.m3u",
+      "channel": "jsdelivr",
+      "enabled": false,
+      "note": "2026-10-07 核实上游 main 已无 Global.m3u，停用该文件；保留同仓 IPTV.m3u/GNTV.m3u"
+    },
+    {
+      "repo": "mzky/checklist",
+      "branch": "master",
+      "path": "itvlist.m3u",
+      "channel": "jsdelivr",
+      "enabled": true,
+      "note": "jsDelivr 实测 2026-09-08: 可达 150KB, 596 条(央视 186/卫视 277), 运营商内网+公网混合, aptv 社区推荐源"
+    },
+    {
+      "repo": "Kimentanm/aptv",
+      "branch": "master",
+      "path": "m3u/iptv.m3u",
+      "channel": "jsdelivr",
+      "enabled": true,
+      "note": "jsDelivr 实测 2026-09-08: 可达, 120 条(央视 48/卫视 85), APTV 官方 IPv6 源"
+    },
+    {
+      "repo": "whpsky/iptv",
+      "branch": "main",
+      "path": "CHINATV.m3u",
+      "channel": "jsdelivr",
+      "enabled": true,
+      "note": "jsDelivr 实测 2026-09-08: 可达, 244 条(央视 57/卫视 85/港澳台 19); 注意文件名大写, IPTV-IPV6.m3u 已 404"
+    },
+    {
+      "repo": "iptv-org/iptv",
+      "branch": "master",
+      "path": "streams/cn.m3u",
+      "channel": "jsdelivr",
+      "enabled": true,
+      "note": "jsDelivr 实测 2026-09-08: 可达, 502 条中国频道(央视 58/卫视 127), GitHub 12 万 stars 全球最大聚合"
+    },
+    {
+      "repo": "Meroser/IPTV",
+      "branch": "main",
+      "path": "IPTV-demo.m3u",
+      "channel": "jsdelivr",
+      "enabled": true,
+      "note": "jsDelivr/NetClient 实测 2026-09-08: 可达 106KB, 432 条(央视 41/卫视 47/港澳台 9), 精选聚合(demo 为历史文件名)"
+    },
+    {
+      "repo": "kimcrowing/IPTV",
+      "branch": "master",
+      "path": "1300个直播源全部有效【全部4k老电脑别用】.m3u8",
+      "channel": "jsdelivr",
+      "enabled": false,
+      "note": "jsDelivr/NetClient 实测 2026-09-08: 中文路径可正常拉取 225KB, 1298 条 4K 源池(央视 210/卫视 202/港澳台 94); 同仓 index.m3u 多为网关源, 此文件构成更优 | 2026-09-26 禁用: 连续失败自 9-17"
+    },
+    {
+      "repo": "nthack/IPTVM3U",
+      "branch": "master",
+      "path": "All.m3u",
+      "channel": "jsdelivr",
+      "enabled": true,
+      "note": "jsDelivr 实测 2026-09-08: 可达 68KB, 683 条(央视 46/卫视 89/港澳台 18), 构成最优; HKTW/GD 子集不重复收录"
+    },
+    {
+      "repo": "kilvn/iptv",
+      "branch": "master",
+      "path": "iptv.m3u",
+      "channel": "jsdelivr",
+      "enabled": true,
+      "note": "jsDelivr 实测 2026-09-08: 可达 138KB, 574 条(央视 26/卫视 41/港澳台 13); 仓库已归档停更, 历史源池仍具补充价值(即 live.kilvn.com 域名背后的仓库)"
+    },
+    {
+      "repo": "Rivens7/Livelist",
+      "branch": "main",
+      "path": "IPTV.m3u",
+      "channel": "jsdelivr",
+      "enabled": true,
+      "note": "jsDelivr 实测 2026-09-08: 可达 20KB, 61 条 IPv6 同步源(央视 24/卫视 37)"
+    },
+    {
+      "repo": "Rivens7/Livelist",
+      "branch": "main",
+      "path": "CNTV.m3u",
+      "channel": "jsdelivr",
+      "enabled": true,
+      "note": "jsDelivr 实测 2026-09-08: 可达 15KB, 37 条省级卫视"
+    },
+    {
+      "repo": "akiralereal/iptv",
+      "branch": "main",
+      "path": "IPTV.m3u",
+      "channel": "jsdelivr",
+      "enabled": true,
+      "note": "jsDelivr 实测 2026-09-08: 可达 14KB, 66 条, 含稀缺 4K 卫视(湖南/东方/浙江)与凤凰三台; 聚合系统每日输出"
+    },
+    {
+      "repo": "zwc456baby/iptv_alive",
+      "branch": "master",
+      "path": "live.m3u",
+      "channel": "jsdelivr",
+      "enabled": true,
+      "note": "jsDelivr 实测 2026-09-08: 可达 6KB, 31 条小体量补充(含 4K 点播映射)"
+    },
+    {
+      "repo": "frankwuzp/iptv-cn",
+      "branch": "main",
+      "path": "tv-ipv4-cn.m3u",
+      "channel": "jsdelivr",
+      "enabled": true,
+      "note": "jsDelivr 实测校准 2026-09-08: 可达"
+    },
+    {
+      "repo": "frankwuzp/iptv-cn",
+      "branch": "main",
+      "path": "tv-ipv4-gd.m3u",
+      "channel": "jsdelivr",
+      "enabled": true,
+      "note": "jsDelivr 实测校准 2026-09-08: 可达, 广东 GITV/移动线路, 利好广东分组"
+    },
+    {
+      "repo": "xisohi/CHINA-IPTV",
+      "branch": "main",
+      "path": "TV/live.txt",
+      "channel": "jsdelivr",
+      "enabled": true,
+      "note": "jsDelivr 实测校准 2026-09-08: 可达, 1.7k stars, TVBox txt 格式"
+    },
+    {
+      "repo": "sammy0101/hk-iptv-auto",
+      "branch": "main",
+      "path": "hk_live.m3u",
+      "channel": "jsdelivr",
+      "enabled": true,
+      "note": "jsDelivr 实测校准 2026-09-08: 可达, 香港频道每日聚合(利好港澳台分组)"
+    },
+    {
+      "repo": "fanmingming/live",
+      "branch": "main",
+      "path": "tv/m3u/index.m3u",
+      "channel": "jsdelivr",
+      "enabled": true,
+      "note": "jsDelivr 实测校准 2026-09-08: 可达, 高质量维护(EPG 同源); 注意部分 cmvideo 源需验证器过筛"
+    },
+    {
+      "repo": "fanmingming/live",
+      "branch": "main",
+      "path": "tv/m3u/itv.m3u",
+      "channel": "jsdelivr",
+      "enabled": true,
+      "note": "jsDelivr 实测校准 2026-09-08: 可达, 含 CCTV5+(HEVC)/第一财经(咪咕 cmvideo)"
+    },
+    {
+      "repo": "yuanzl77/IPTV",
+      "branch": "main",
+      "path": "live.txt",
+      "channel": "jsdelivr",
+      "enabled": false,
+      "note": "2026-09-08 二次复核: data API 仍列出 live.txt 但 jsDelivr 实拉 60B 错误页(Couldn't find requested file), 维持禁用; live.m3u 3.6MB 超单仓拉取上限"
+    },
+    {
+      "repo": "kimcrowing/IPTV",
+      "branch": "master",
+      "path": "index.m3u",
+      "channel": "jsdelivr",
+      "enabled": false,
+      "note": "jsDelivr 实测校准 2026-05: main 分支 404, master/index.m3u 可达(多为网关源, 规则库会拦截) | 2026-09-26 禁用: 连续失败自 9-17"
+    },
+    {
+      "repo": "zbefine/iptv",
+      "branch": "main",
+      "path": "iptv.m3u",
+      "channel": "jsdelivr",
+      "enabled": true,
+      "note": "jsDelivr 实测校准 2026-05: 可达"
+    },
+    {
+      "repo": "atsushi444/iptv",
+      "branch": "main",
+      "path": "tv.m3u",
+      "channel": "jsdelivr",
+      "enabled": true,
+      "note": "jsDelivr 实测校准 2026-05: iptv.m3u 已 404, tv.m3u 可达"
+    },
+    {
+      "repo": "liu673cn/bug",
+      "branch": "main",
+      "path": "sub/live/live.txt",
+      "channel": "jsdelivr",
+      "enabled": true,
+      "note": "jsDelivr 实测校准 2026-05: TVBox txt 格式(#genre#)"
+    },
+    {
+      "repo": "liu673cn/xbb",
+      "branch": "main",
+      "path": "live/zhibo.txt",
+      "channel": "jsdelivr",
+      "enabled": true,
+      "note": "jsDelivr 实测校准 2026-05: 部分行无逗号分隔, 解析器自动跳过"
+    },
+    {
+      "repo": "xlc520/MaoTV",
+      "branch": "main",
+      "path": "zhibo.txt",
+      "channel": "jsdelivr",
+      "enabled": true,
+      "note": "jsDelivr 实测校准 2026-05: 可达"
+    },
+    {
+      "repo": "kimwang1978/collect-txt",
+      "branch": "main",
+      "path": "live.txt",
+      "channel": "jsdelivr",
+      "enabled": false,
+      "note": "2026-09-08 复测: 根目录 live.txt 可达但停更于 2025-05(内容为聚合订阅跳转, 非直链清单), 维持禁用"
+    },
+    {
+      "repo": "asdjkl6/asdjkl6.github.io",
+      "branch": "main",
+      "path": "",
+      "channel": "jsdelivr",
+      "enabled": false,
+      "note": "TODO: jsDelivr data API 与常见路径(ip.txt/tv.txt/live.txt)均 404/403, 具体文件路径待人工确认"
+    }
+  ],
+  "_note": "37 启用 + 3 禁用(待校准); URL 格式 https://cdn.jsdelivr.net/gh/{repo}@{branch}/{path}; enabled=false 不参与发现; 新增条目由 RepoMiner 挖矿机制持续补充; 发现方法: GitHub 仓库搜索(stars 排序)+ 引用网络反查"
+}

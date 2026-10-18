@@ -1,0 +1,123 @@
+<div id="kantv-preview" aria-label="看电视交互原型">
+  <style>
+    #kantv-preview{--kt-ink:light-dark(#17212a,#edf2f5);--kt-paper:light-dark(#f1f4f6,#172129);--kt-panel:light-dark(#e1e8ee,#22313c);--kt-line:light-dark(#9aaab7,#4c6372);--kt-focus:light-dark(#124f70,#bee6fb);--kt-onfocus:light-dark(#fff,#112430);font-family:"PingFang SC","Microsoft YaHei",sans-serif;color:var(--kt-ink)}
+    #kantv-preview *{box-sizing:border-box}
+    #kantv-preview button,#kantv-preview select{font:inherit;cursor:pointer}
+    #kantv-preview .kt-lab{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:10px}
+    #kantv-preview .kt-lab select,#kantv-preview .kt-lab button{color:var(--kt-ink);background:var(--kt-paper);border:1px solid var(--kt-line);border-radius:6px;padding:8px 12px;min-height:40px}
+    #kantv-preview .kt-label{margin-right:4px}
+    #kantv-preview .kt-tv{background:var(--kt-paper);min-height:430px;position:relative;border-radius:12px;overflow:hidden;font-size:var(--kt-size,19px)}
+    #kantv-preview .kt-header{display:flex;justify-content:space-between;gap:16px;align-items:center;padding:18px 24px;border-bottom:1px solid var(--kt-line)}
+    #kantv-preview .kt-scene{min-height:430px;background:linear-gradient(155deg,#283e4c 0%,#4a6d6a 47%,#1b2c37 48%,#091920 100%);color:#f3f8fa;display:flex;align-items:center;justify-content:center;position:relative}
+    #kantv-preview .kt-program{text-align:center;letter-spacing:.16em;font-size:32px;font-weight:500}
+    #kantv-preview .kt-program small{display:block;font-size:14px;letter-spacing:.25em;margin-top:14px;color:#e0eded}
+    #kantv-preview .kt-channel-mark{position:absolute;top:24px;left:26px;font-size:18px;letter-spacing:.06em}
+    #kantv-preview .kt-overlay{position:absolute;inset:auto 0 0;background:var(--kt-paper);padding:22px 24px;border-top:1px solid var(--kt-line)}
+    #kantv-preview .kt-title{font-size:24px;font-weight:500;margin:0 0 12px}
+    #kantv-preview .kt-sub{font-size:15px;opacity:.8;margin:8px 0 12px}
+    #kantv-preview .kt-actions{display:flex;gap:10px;flex-wrap:wrap}
+    #kantv-preview .kt-item{display:block;background:transparent;border:2px solid transparent;color:var(--kt-ink);padding:13px 16px;min-height:48px;border-radius:7px;text-align:left;font-size:inherit}
+    #kantv-preview .kt-item small{display:block;font-size:14px;margin-top:7px;opacity:.8}
+    #kantv-preview .kt-item.kt-selected{background:var(--kt-focus);color:var(--kt-onfocus);border-color:var(--kt-focus)}
+    #kantv-preview .kt-side{position:absolute;inset:0 auto 0 0;width:44%;background:var(--kt-paper);padding:16px;display:flex;flex-direction:column;gap:5px}
+    #kantv-preview .kt-side .kt-title{padding:6px 14px}
+    #kantv-preview .kt-with-list .kt-program{margin-left:44%;font-size:24px}
+    #kantv-preview .kt-guide{padding:20px}
+    #kantv-preview .kt-guide-top{display:grid;grid-template-columns:38% 1fr;gap:22px;margin-bottom:18px;align-items:center}
+    #kantv-preview .kt-mini{min-height:130px;border-radius:8px}
+    #kantv-preview .kt-mini .kt-program{font-size:19px}
+    #kantv-preview .kt-mini .kt-channel-mark{display:none}
+    #kantv-preview .kt-grid{display:grid;grid-template-columns:23% 1fr 1fr;gap:5px}
+    #kantv-preview .kt-time{font-size:14px;padding:8px}
+    #kantv-preview .kt-rowname{padding:13px 8px;font-size:17px}
+    #kantv-preview .kt-grid .kt-item{background:var(--kt-panel);font-size:17px;min-width:0;overflow-wrap:anywhere}
+    #kantv-preview .kt-grid .kt-selected{background:var(--kt-focus)}
+    #kantv-preview .kt-with-groups{display:grid;grid-template-columns:170px minmax(0,1fr)}
+    #kantv-preview .kt-groups{padding:20px 12px;background:var(--kt-panel)}
+    #kantv-preview .kt-groups .kt-item{width:100%}
+    #kantv-preview .kt-settings{display:grid;grid-template-columns:34% 1fr;min-height:430px}
+    #kantv-preview .kt-setting-nav{background:var(--kt-panel);padding:22px 14px}
+    #kantv-preview .kt-setting-nav .kt-item{width:100%;padding:10px 14px}
+    #kantv-preview .kt-setting-body{padding:28px}
+    #kantv-preview .kt-setting-body .kt-item{width:100%;border-bottom:1px solid var(--kt-line);border-radius:0;margin-top:8px}
+    #kantv-preview .kt-status{min-height:430px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:12px;padding:30px;text-align:center}
+    #kantv-preview .kt-status .kt-title{margin:0}
+    #kantv-preview .kt-status .kt-sub{max-width:380px}
+    #kantv-preview .kt-remote{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:12px;align-items:center}
+    #kantv-preview .kt-remote button{background:var(--kt-paper);color:var(--kt-ink);border:1px solid var(--kt-line);border-radius:6px;min-width:46px;min-height:44px;padding:8px 12px}
+    #kantv-preview .kt-foot{font-size:12px;margin-top:10px;opacity:.8;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+    @media(max-width:560px){#kantv-preview .kt-tv{font-size:16px;min-height:430px}#kantv-preview .kt-side{width:60%}#kantv-preview .kt-with-list .kt-program{margin-left:60%;font-size:16px;letter-spacing:0}#kantv-preview .kt-guide{padding:12px}#kantv-preview .kt-guide-top{grid-template-columns:1fr;gap:12px}#kantv-preview .kt-mini{min-height:90px}#kantv-preview .kt-guide-top .kt-sub{display:none}#kantv-preview .kt-guide-top .kt-title{font-size:18px;margin:0}#kantv-preview .kt-grid{grid-template-columns:25% 1fr 1fr}#kantv-preview .kt-grid .kt-item,#kantv-preview .kt-rowname{font-size:14px;padding:10px 6px}#kantv-preview .kt-settings{grid-template-columns:1fr}#kantv-preview .kt-setting-nav{padding:10px;display:flex;flex-wrap:wrap;gap:4px}#kantv-preview .kt-setting-nav .kt-item{width:auto;font-size:14px}#kantv-preview .kt-setting-body{padding:20px}#kantv-preview .kt-with-groups{grid-template-columns:110px minmax(0,1fr)}#kantv-preview .kt-with-groups .kt-guide-top{display:none}#kantv-preview .kt-with-groups .kt-grid{grid-template-columns:1fr}#kantv-preview .kt-with-groups .kt-time{display:none}#kantv-preview .kt-groups{padding:12px 5px}#kantv-preview .kt-groups .kt-item{padding:10px 7px;font-size:14px}}
+  </style>
+  <div class="kt-lab" aria-label="原型场景选择">
+    <label><span class="kt-label">页面</span><select id="kt-page"><option value="player">全屏播放</option><option value="channels">频道列表</option><option value="guide">节目表</option><option value="settings">设置</option></select></label>
+    <label><span class="kt-label">状态</span><select id="kt-state"><option value="normal">正常播放</option><option value="loading">加载</option><option value="empty">空列表</option><option value="noepg">无节目单</option><option value="error">播放失败</option></select></label>
+    <button type="button" id="kt-reopen">模拟重新打开</button>
+  </div>
+  <div class="kt-tv" id="kt-screen"></div>
+  <div class="kt-remote" aria-label="模拟遥控器">
+    <button type="button" data-key="ArrowLeft" aria-label="左方向键">←</button><button type="button" data-key="ArrowUp" aria-label="上方向键">↑</button><button type="button" data-key="Enter">确认</button><button type="button" data-key="ArrowDown" aria-label="下方向键">↓</button><button type="button" data-key="ArrowRight" aria-label="右方向键">→</button><button type="button" data-key="Escape">返回</button>
+  </div>
+  <div class="kt-foot"><span>交互原型 · 虚构频道与模拟画面</span><span id="kt-feedback" aria-live="polite">确认或左键打开频道列表</span></div>
+  <script>
+  (()=>{
+    const root=document.getElementById('kantv-preview'),screen=root.querySelector('#kt-screen'),pageSelect=root.querySelector('#kt-page'),stateSelect=root.querySelector('#kt-state'),feedback=root.querySelector('#kt-feedback');
+    const channels=[{name:'山野频道',show:'山野之间',next:'四季风物',group:'纪实'},{name:'生活频道',show:'家常味道',next:'街巷人家',group:'生活'},{name:'戏曲频道',show:'梨园春色',next:'经典选段',group:'戏曲'},{name:'人文频道',show:'行走中国',next:'书香时光',group:'纪实'}];
+    const groups=['全部频道','收藏','纪实','生活','戏曲'],categories=['通用','播放列表','节目单（EPG）','频道台标','外观','播放','遥控器','备份与恢复','诊断信息'];
+    const st={page:'player',condition:'normal',playing:0,selected:0,saved:0,col:0,control:0,group:0,setting:0,row:0,option:null,optionIndex:0,epg:'跟随播放列表',logos:'播放列表优先',update:'每天',detail:false,info:false,font:19,largeFocus:true};
+    let timer=null;
+    const btn=(label,action,active=false,sub='')=>`<button type="button" class="kt-item ${active?'kt-selected':''}" data-action="${action}">${label}${sub?`<small>${sub}</small>`:''}</button>`;
+    function visible(){return channels.map((c,i)=>i).filter(i=>st.group===0||(st.group===1?i===0:channels[i].group===groups[st.group]));}
+    function program(i){return st.condition==='noepg'?'暂无节目单':channels[i].show;}
+    function scene(mini=false){return `<div class="kt-scene ${mini?'kt-mini':''}"><span class="kt-channel-mark">${channels[st.playing].name}</span><div class="kt-program">${channels[st.playing].show}<small>演示画面</small></div></div>`;}
+    function say(text){feedback.textContent=text;}
+    function choose(i,preview=false){if(st.condition==='error'||st.condition==='loading')st.condition='normal';st.playing=i;st.selected=i;st.saved=i;st.info=!preview;st.page=preview?'guide':'player';render();say(preview?'正在预览；再次确认进入全屏':'已切换频道（模拟）');if(!preview){clearTimeout(timer);timer=setTimeout(()=>{st.info=false;render();},3000);}}
+    function guide(){let ids=visible();return `<div class="kt-guide"><div class="kt-guide-top">${scene(true)}<div><div class="kt-title">${program(st.selected)}</div><div class="kt-sub">${channels[st.selected].name}${st.condition==='noepg'?' · 仍可观看':' · 19:00–19:30'}</div><div class="kt-sub">${st.playing===st.selected?'确认进入全屏':'确认开始预览'}</div></div></div><div class="kt-grid"><div class="kt-time">今天</div><div class="kt-time">${st.condition==='noepg'?'当前':'19:00'}</div><div class="kt-time">${st.condition==='noepg'?'下一节目':'19:30'}</div>${ids.map(i=>`<div class="kt-rowname">${st.playing===i?'▸ ':''}${channels[i].name}</div>${btn(program(i),`guide:${i}:0`,st.page==='guide'&&st.selected===i&&st.col===0)}${btn(st.condition==='noepg'?'暂无节目单':channels[i].next,`guide:${i}:1`,st.page==='guide'&&st.selected===i&&st.col===1)}`).join('')}</div></div>`;}
+    const options={epg:['跟随播放列表','中文公共节目单（候选）','自定义 XMLTV','关闭节目单'],logos:['播放列表优先','中文台标库补全（候选）','国际频道资料库（候选）','仅显示频道名称'],update:['每天','每 12 小时','手动更新']};
+    function settingRows(){return [
+      [['启动后','恢复上次频道并全屏播放'],['日常界面','仅必要频道与节目信息']],
+      [['示例播放列表','4 个虚构频道 · 仅原型'],['添加播放列表','模拟导入演示样例','import']],
+      [['节目单来源',st.epg,'option:epg'],['频道匹配','优先频道标识；重名时由家人指定'],['自动更新',st.update,'option:update'],['立即更新','尚未连接真实来源','refresh'],['时间校正','自动识别时区；可按来源调整'],['更新状态','未下载 · 原型选择不验证源可用性']],
+      [['台标来源',st.logos,'option:logos'],['匹配规则','优先已有台标；缺失时按频道资料补全'],['手动指定台标','可为单个频道纠正'],['本地缓存','加载失败保留旧台标；没有台标显示名称']],
+      [['字体大小','大号'],['焦点样式','高对比填充']],
+      [['播放策略','自动 · 待实际播放测试后确定'],['音轨与字幕','后续阶段'],['画面比例','默认保持原比例'],['回看、时移、录制、多画面','按依赖分期实现']],
+      [['全屏确认键','打开频道列表'],['底部控制栏返回键','关闭控制栏，继续全屏播放'],['自定义按键','后续阶段']],
+      [['备份配置','含频道匹配、节目单和台标设置'],['恢复配置','后续阶段']],
+      [['当前版本','交互原型，无真实播放内核'],['网络、解码、错误与更新详情','正式版本在这里展示'],['设备兼容','两台设备均待实测']]
+    ][st.setting];}
+    function settingBody(){if(st.option)return `<div class="kt-title">${st.option==='epg'?'节目单来源':st.option==='logos'?'台标来源':'自动更新'}</div><div class="kt-sub">选择仅用于原型演示</div>${options[st.option].map((v,i)=>btn(v,`pick:${i}`,i===st.optionIndex)).join('')}`;return `<div class="kt-title">${categories[st.setting]}</div>${settingRows().map((r,j)=>btn(r[0],`row:${j}`,st.detail&&j===st.row,r[1])).join('')}`;}
+    function render(){screen.style.setProperty('--kt-size',st.font+'px');pageSelect.value=['controls','menu','groups','import','program'].includes(st.page)?(st.page==='groups'||st.page==='program'?'guide':st.page==='import'?'settings':'player'):st.page;stateSelect.value=st.condition;let out='';
+      if(st.condition==='empty'&&st.page!=='settings'&&st.page!=='import'){out=`<div class="kt-status"><div class="kt-title">还没有频道</div><div class="kt-sub">添加播放列表后，就可以开始看电视。</div>${btn('添加播放列表','import',true)}</div>`;}
+      else if(st.page==='import'){out=`<div class="kt-status"><div class="kt-title">添加播放列表</div><div class="kt-sub">本次仅演示导入流程，不读取真实文件或地址。</div>${btn('导入示例频道','sample',true)}${btn('返回设置','settings')}</div>`;}
+      else if(st.condition==='loading'&&st.page==='player'){out=`<div class="kt-status"><div class="kt-title">正在打开 ${channels[st.playing].name}</div><div class="kt-sub">请稍候</div>${btn('选择其他频道','channels',true)}</div>`;}
+      else if(st.condition==='error'&&st.page==='player'){out=`<div class="kt-status"><div class="kt-title">暂时无法播放</div><div class="kt-sub">可以重试，或先看看其他频道。</div><div class="kt-actions">${btn('重试','retry',st.control===0)}${btn('选择频道','channels',st.control===1)}</div></div>`;}
+      else if(st.page==='settings'){out=`<div class="kt-settings"><div class="kt-setting-nav"><div class="kt-title">设置</div>${categories.map((c,i)=>btn(c,`setting:${i}`,st.setting===i&&!st.detail)).join('')}</div><div class="kt-setting-body">${settingBody()}</div></div>`;}
+      else if(st.page==='guide'||st.page==='groups'){out=st.page==='groups'?`<div class="kt-with-groups"><div class="kt-groups"><div class="kt-title">频道</div>${groups.map((g,i)=>btn(g,`group:${i}`,st.group===i)).join('')}</div>${guide()}</div>`:guide();}
+      else if(st.page==='program'){out=`<div class="kt-status"><div class="kt-title">${channels[st.selected].next}</div><div class="kt-sub">19:30 开始 · ${channels[st.selected].name}</div>${btn('观看当前直播','live',true)}${btn('返回节目表','guide')}</div>`;}
+      else{out=scene();if(st.page==='channels'){out=`<div class="kt-with-list">${out}</div><div class="kt-side"><div class="kt-title">${groups[st.group]}</div>${visible().map(i=>btn(`${String(i+1).padStart(2,'0')}　${channels[i].name}`,`channel:${i}`,i===st.selected,program(i))).join('')}</div>`;}if(st.page==='controls'){out+=`<div class="kt-overlay"><div class="kt-title">${program(st.playing)}</div><div class="kt-sub">${channels[st.playing].name}${st.condition==='noepg'?'':' · 19:00–19:30'}</div><div class="kt-actions">${['节目表','频道列表','最近观看','设置'].map((v,i)=>btn(v,`control:${i}`,st.control===i)).join('')}</div></div>`;}if(st.page==='menu'){out+=`<div class="kt-side"><div class="kt-title">看电视</div>${['电视','频道列表','设置'].map((v,i)=>btn(v,`menu:${i}`,st.control===i)).join('')}</div>`;}if(st.page==='player'&&st.info)out+=`<div class="kt-overlay"><div class="kt-title">${channels[st.playing].name}</div><div>${program(st.playing)}</div></div>`;}
+      const restoreFocus=screen.contains(document.activeElement);screen.innerHTML=out;if(restoreFocus)(screen.querySelector('.kt-selected')||root.querySelector('[data-key="Enter"]')).focus({preventScroll:true});
+    }
+    function go(page){clearTimeout(timer);st.info=false;st.detail=false;st.option=null;st.row=0;st.page=page;st.control=0;if(page==='channels')st.selected=visible().includes(st.playing)?st.playing:visible()[0];render();}
+    function action(a){const [type,v,col]=a.split(':');if(type==='channel')choose(Number(v));else if(type==='guide'){st.selected=Number(v);st.col=Number(col);if(st.col===1&&st.condition!=='noepg'){go('program');}else if(st.playing===st.selected)choose(st.selected);else choose(st.selected,true);}else if(type==='control'){st.control=Number(v);if(st.control===2){render();say('最近观看为后续阶段，本版仅展示入口');}else go(['guide','channels','','settings'][st.control]);}else if(type==='setting'){st.setting=Number(v);st.detail=true;st.row=0;st.option=null;render();}else if(type==='row'){st.row=Number(v);st.detail=true;action(settingRows()[st.row][2]||'detail');}else if(type==='option'){st.option=v;st.optionIndex=Math.max(0,options[v].indexOf(st[v]));render();}else if(type==='pick'){const prop=st.option;st[prop]=options[prop][Number(v)];st.option=null;render();say('已选择（仅模拟），尚未下载或验证真实资料');}else if(type==='refresh'){say('原型未连接真实来源；正式版会报告更新结果并保留上次可用资料');}else if(type==='group'){st.group=Number(v);st.selected=visible()[0];go('guide');}else if(type==='menu'){go(['guide','channels','settings'][Number(v)]);}else if(type==='sample'){st.condition='normal';st.group=0;choose(0);say('已模拟导入 4 个频道');}else if(type==='retry'){st.condition='loading';render();say('模拟重试中');clearTimeout(timer);timer=setTimeout(()=>{st.condition='normal';choose(st.playing);},1000);}else if(type==='live'){choose(st.selected);}else if(type==='detail'){say('此处为设置说明；对应功能尚未实现');}else go(type);}
+    function moveChannel(delta){const ids=visible(),at=Math.max(0,ids.indexOf(st.selected));st.selected=ids[(at+delta+ids.length)%ids.length];}
+    function key(k){if(st.page==='import'){if(k==='Enter')action('sample');else if(k==='Escape')go('settings');return;}if(st.condition==='empty'&&st.page!=='settings'){if(k==='Enter')go('import');else if(k==='Escape')go('settings');return;}if(st.page==='player'){if(st.condition==='error'){if(k==='ArrowLeft'||k==='ArrowRight')st.control=1-st.control;else if(k==='Enter'){action(st.control===0?'retry':'channels');return;}else if(k==='Escape'){go('guide');return;}render();return;}if(st.condition==='loading'){if(k==='Enter'||k==='Escape'||k==='ArrowLeft')go('channels');return;}if(k==='ArrowLeft'||k==='Enter')go('channels');else if(k==='Escape'){if(st.info){st.info=false;render();}else go('guide');}else go('controls');return;}
+      if(st.page==='channels'){if(k==='ArrowUp')moveChannel(-1);if(k==='ArrowDown')moveChannel(1);if(k==='Enter'){choose(st.selected);return;}if(k==='Escape'){go('player');return;}if(k==='ArrowLeft'){go('groups');return;}}
+      else if(st.page==='guide'){if(k==='ArrowUp')moveChannel(-1);if(k==='ArrowDown')moveChannel(1);if(k==='ArrowRight')st.col=1;if(k==='ArrowLeft'){if(st.col===1)st.col=0;else{go('groups');return;}}if(k==='Enter'){action(`guide:${st.selected}:${st.col}`);return;}if(k==='Escape'){go('groups');return;}}
+      else if(st.page==='groups'){if(k==='ArrowUp')st.group=(st.group+groups.length-1)%groups.length;if(k==='ArrowDown')st.group=(st.group+1)%groups.length;st.selected=visible()[0];if(k==='Enter'||k==='ArrowRight'){go('guide');return;}if(k==='Escape'||k==='ArrowLeft'){go('menu');return;}}
+      else if(st.page==='controls'||st.page==='menu'){const n=st.page==='controls'?4:3;if(k==='ArrowRight'||k==='ArrowDown')st.control=(st.control+1)%n;if(k==='ArrowLeft'||k==='ArrowUp')st.control=(st.control+n-1)%n;if(k==='Enter'){action(`${st.page==='controls'?'control':'menu'}:${st.control}`);return;}if(k==='Escape'){go(st.page==='controls'?'player':'groups');return;}}
+      else if(st.page==='settings'){
+        if(st.option){const n=options[st.option].length;if(k==='Escape'||k==='ArrowLeft')st.option=null;else if(k==='ArrowDown')st.optionIndex=(st.optionIndex+1)%n;else if(k==='ArrowUp')st.optionIndex=(st.optionIndex+n-1)%n;else if(k==='Enter'){action(`pick:${st.optionIndex}`);return;}}
+        else if(k==='Escape'||k==='ArrowLeft'){if(st.detail)st.detail=false;else{go('menu');return;}}
+        else if(k==='ArrowDown'||k==='ArrowUp'){const delta=k==='ArrowDown'?1:-1;if(st.detail){const n=settingRows().length;st.row=(st.row+delta+n)%n;}else{st.setting=(st.setting+delta+categories.length)%categories.length;st.row=0;}}
+        else if(k==='Enter'||k==='ArrowRight'){if(st.detail&&k==='Enter'){action(`row:${st.row}`);return;}st.detail=true;}
+      }
+      else if(st.page==='program'){if(k==='Enter'){choose(st.selected);return;}if(k==='Escape'){go('guide');return;}}render();
+    }
+    root.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.action)action(b.dataset.action);if(b.dataset.key)key(b.dataset.key);});
+    root.addEventListener('keydown',e=>{if(e.target.closest('.kt-lab'))return;if(e.key==='Enter'&&e.target.tagName==='BUTTON')return;if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Enter','Escape'].includes(e.key))return;const inScreen=screen.contains(e.target);e.preventDefault();key(e.key);if(inScreen)(screen.querySelector('.kt-selected')||root.querySelector('[data-key="Enter"]')).focus({preventScroll:true});});
+    pageSelect.addEventListener('change',()=>go(pageSelect.value));stateSelect.addEventListener('change',()=>{clearTimeout(timer);st.condition=stateSelect.value;st.info=false;st.control=0;if(['empty','loading','error'].includes(st.condition))st.page='player';render();say('已切换原型状态');});
+    root.querySelector('#kt-reopen').addEventListener('click',()=>{st.playing=st.saved;st.selected=st.saved;st.condition=st.condition==='empty'?'empty':'normal';st.group=0;go('player');say('已模拟恢复上次频道；正式版本需验证持久化');});
+    render();
+    if(globalThis.Tweak){const tweak=new Tweak({container:screen,onChange:render});tweak.addSlider(st,'font',{label:'界面字号',min:17,max:23,unit:'px'});}
+  })();
+  </script>
+</div>

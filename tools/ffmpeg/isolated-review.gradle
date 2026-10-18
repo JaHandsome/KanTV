@@ -1,0 +1,80 @@
+// Apply only to a disposable tracked-source copy. The repository default uses the verified AAR.
+if (System.getenv().keySet().any { it.startsWith('KANTV_') && !it.startsWith('KANTV_FFMPEG_REVIEW_') }) {
+    throw new GradleException('Remove household KANTV_* build settings before isolated review')
+}
+def label = System.getenv('KANTV_FFMPEG_REVIEW_LABEL')
+if (!(label in ['control', 'default'])) {
+    throw new GradleException('Set KANTV_FFMPEG_REVIEW_LABEL to control or default')
+}
+def fixtures = System.getenv('KANTV_FFMPEG_REVIEW_FIXTURES')
+def abi = System.getenv('KANTV_FFMPEG_REVIEW_ABI')
+if (!fixtures || !(abi in ['arm64-v8a', 'armeabi-v7a', 'x86', 'x86_64'])) {
+    throw new GradleException('Explicit synthetic fixture directory and emulator ABI are required')
+}
+def reviewAar = System.getenv('KANTV_FFMPEG_REVIEW_AAR')
+def buildType = System.getenv('KANTV_FFMPEG_REVIEW_BUILD_TYPE') ?: 'debug'
+if (!(buildType in ['debug', 'release'])) throw new GradleException('Unknown review build type')
+if (label == 'control' && (!reviewAar || !new File(reviewAar).isFile())) {
+    throw new GradleException('Control review requires the privately preserved legacy KANTV_FFMPEG_REVIEW_AAR')
+}
+if (label == 'default' && reviewAar) {
+    throw new GradleException('Default review forbids KANTV_FFMPEG_REVIEW_AAR overrides')
+}
+
+allprojects { p ->
+    p.plugins.withId('com.android.application') {
+        p.androidComponents.finalizeDsl { android ->
+            android.defaultConfig.applicationId = "com.kantv.app.ffmpeg${label}"
+            android.defaultConfig.testApplicationId = "com.kantv.app.ffmpeg${label}.test"
+            android.defaultConfig.testInstrumentationRunner = 'com.kantv.app.review.FfmpegDecodeInstrumentation'
+            android.defaultConfig.ndk.abiFilters.clear()
+            android.defaultConfig.ndk.abiFilters.add(abi)
+            android.buildTypes.debug.buildConfigField('boolean', 'KANTV_DIAGNOSTICS', 'false')
+            android.sourceSets.androidTest.assets.srcDir(fixtures)
+            if (buildType == 'release') {
+                android.testBuildType = 'release'
+                // Test signing belongs only to the isolated application ID above.
+                android.buildTypes.release.signingConfig = android.signingConfigs.debug
+                // Direct decoder APIs may be inlined/removed if only the other APK calls them.
+                // Compile this bounded harness with the target so R8 sees and rewrites its calls.
+                def harnessRoot = new File(p.layout.buildDirectory.get().asFile, 'ffmpeg-review-src')
+                def harness = new File(harnessRoot, 'com/kantv/app/review/FfmpegDecodeInstrumentation.kt')
+                harness.parentFile.mkdirs()
+                harness.text = new File(p.projectDir,
+                    'src/androidTest/java/com/kantv/app/review/FfmpegDecodeInstrumentation.kt').text
+                android.sourceSets.release.java.srcDir(harnessRoot)
+                // This review runs one harness; the test APK supplies its manifest and assets.
+                android.sourceSets.androidTest.java.setSrcDirs([])
+                p.kotlin.sourceSets.matching { it.name == 'androidTest' }.configureEach {
+                    kotlin.setSrcDirs([])
+                }
+                def entryRules = new File(p.layout.buildDirectory.get().asFile, 'ffmpeg-review-entry.pro')
+                entryRules.text = '''-keep class com.kantv.app.review.FfmpegDecodeInstrumentation {
+    public <init>();
+    public void onCreate(android.os.Bundle);
+    public void onStart();
+}
+'''
+                android.buildTypes.release.proguardFile(entryRules)
+            }
+        }
+        if (label == 'control') {
+            p.afterEvaluate {
+                def provenance = new Properties()
+                new File(p.projectDir, 'libs/media3-ffmpeg-provenance.properties').withInputStream { provenance.load(it) }
+                def expectedHash = 'f0ddd7d528320d508713be055e7fa69b24529fecc89d2ee0746916eceefeff38'
+                def actualHash = java.security.MessageDigest.getInstance('SHA-256')
+                    .digest(new File(reviewAar).bytes).encodeHex().toString()
+                if (actualHash != expectedHash) throw new GradleException('Review AAR does not match the private legacy control identity')
+                def dependencies = p.configurations.getByName('implementation').dependencies
+                def bundled = dependencies.findAll { dependency ->
+                    dependency instanceof org.gradle.api.artifacts.FileCollectionDependency &&
+                        dependency.files.files.any { it.name == provenance.getProperty('aar.file') }
+                }
+                if (bundled.size() != 1) throw new GradleException('Expected exactly one verified default FFmpeg dependency')
+                dependencies.removeAll(bundled)
+                p.dependencies.add('implementation', p.files(reviewAar))
+            }
+        }
+    }
+}

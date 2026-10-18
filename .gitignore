@@ -1,0 +1,79 @@
+# 第三方参考材料仅保存在本机，不属于 kantv 实现。
+/reference/
+/.tools/
+/.gradle/
+/.gradle-sandbox/
+/.dsh-gradle/
+/.kotlin/
+/local.properties
+**/build/
+# Kotlin 的 build 测试包属于源码，不是构建输出。
+!/app/src/test/java/com/kantv/app/build/
+!/app/src/test/java/com/kantv/app/build/*.kt
+.DS_Store
+# 本机签名材料、合并备份和工作记录只留在 TV 目录，不进入仓库。
+/.signing/
+/.archive/
+/.scratch/
+/.trae/
+/prototype/server.log
+# User-provided private snapshot: included only in local APKs, never committed.
+/app/src/main/assets/bundled-default/
+# 发布产物目录：内含 source-snapshot.tar.gz，那里面打包了真实流地址（已实测），一律不入库。
+/deliveries/
+.codegraph/
+# 本机工具状态，不属于 kantv 实现。
+/.playwright-cli/
+/.workbuddy/
+# 本机会话记忆，不属于 kantv 实现。
+/.pi/
+# 来源不明的旧 AAR 只作私有对照保留；默认使用可追溯制品。
+/app/libs/media3-decoder-ffmpeg-1.11.0.aar
+/app/libs/media3-decoder-ffmpeg-1.11.0-mp3.aar
+# 验收证据（真实广播的音频录制与截图，未脱敏且共约 300MB）：只留本机，不入库。
+/docs/evidence/
+
+# ---- server/（iptv-nas 服务端，2026-09-25 并入）----
+# 运行期数据与密钥材料：只留在本机与 NAS，绝不入库（对应 server/.dockerignore 不入镜像）。
+/server/data/
+/server/config/settings.json
+/server/config/hub_client_token.txt
+# 含真实可用/曾可用签名地址的机器可读文件（docs 下的 .md 文档只含端点引用，可入库）。
+/server/docs/urlkey_vectors.json
+/server/docs/live.media3.sample.json
+/server/docs/live.kodiprop.sample.m3u
+/server/docs/offline_targets*.json
+/server/docs/static_offline_targets*.json
+# 服务端根目录的现场输出留档（含真实签名地址）；_hub_accept*.sh 脚本与 _hub_contract_v11_block.md 可入库。
+/server/_*.txt
+/server/_*.json
+# 服务端备份目录 / 隔离区 / Python 缓存
+/server/*.bak.*/
+/server/.trash_*/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# 含早期现场地址的私有历史资料保留在本机，不进入 GitHub 基线。
+/server/docs/archive/AUDIT_HUB_ARCH_2026-09-11.md
+/server/docs/archive/HK_MPD_ROUTE_DESIGN_2026-09-10.md
+/server/docs/archive/HK_SOURCE_CHANNEL_MAP_2026-09-10.md
+/server/docs/archive/HK_TW_CHANNEL_EXPANSION_CANDIDATES_2026-09-11.md
+/server/docs/archive/MEDIA3_CLIENT_ARCH_REVIEW.md
+/server/docs/archive/XIAOTAN_MECHANISM_ANALYSIS_2026-09-11.md
+
+# 家庭历史、稳定交付原件和内部现场工具只保留本机。
+/docs/PLAYBACK_STABLE_BASELINE.json
+/docs/M3U_BASELINE_GECKO_20261014.json
+/docs/GITHUB_CLOSEOUT_V53_20261014.json
+/server/docs/archive/
+/server/deploy/NAS部署操作手册_*.md
+/server/_hub_accept.sh
+/server/_hub_accept_v11.sh
+/server/deploy/remote_setup.sh
+/server/tools/hub_urlkey_divergence.py
+/server/tools/probe_candidates.py
+/tools/native_trace*
+/server/runtime/
+/.private/
+/server/deploy/nas_task.md

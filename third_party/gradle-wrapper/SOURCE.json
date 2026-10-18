@@ -1,0 +1,28 @@
+{
+  "upstream_project": "Gradle",
+  "upstream_repository": "https://github.com/gradle/gradle",
+  "verified_tag": "v7.4.2",
+  "verified_commit": "540473b8118064efcc264694cbcaa4b677f61041",
+  "launcher": {
+    "path": "gradle/wrapper/gradle-wrapper.jar",
+    "url": "https://raw.githubusercontent.com/gradle/gradle/540473b8118064efcc264694cbcaa4b677f61041/gradle/wrapper/gradle-wrapper.jar",
+    "sha256": "575098db54a998ff1c6770b352c3b16766c09848bee7555dab09afc34e8cf590",
+    "identity_note": "The bundled launcher is byte-identical to the official v7.4.2 file. Gradle 7.4 and 7.4.1 share this hash; the bytes do not uniquely identify the generating release."
+  },
+  "distribution": {
+    "version": "8.11.1",
+    "configuration": "gradle/wrapper/gradle-wrapper.properties",
+    "note": "The launcher downloads and runs the separately configured distribution; its version is not the launcher identity."
+  },
+  "files": {
+    "LICENSE": {
+      "url": "https://raw.githubusercontent.com/gradle/gradle/540473b8118064efcc264694cbcaa4b677f61041/LICENSE",
+      "sha256": "e5bfcf1132c8e12c3fce87d4dfbcb543cfb7202d8fa28ba85c07132e30836437"
+    },
+    "NOTICE": {
+      "url": "https://raw.githubusercontent.com/gradle/gradle/540473b8118064efcc264694cbcaa4b677f61041/subprojects/distributions-full/src/toplevel/NOTICE",
+      "sha256": "c2de5fd9adc7ccc4e1382a0e1f38ec6e14f8ca6e28d3c20289fe80353b019aa1"
+    }
+  },
+  "notice_scope": "LICENSE and NOTICE are complete, unmodified upstream v7.4.2 texts. The distribution NOTICE names additional distribution dependencies; preserving that full text does not assert that all those dependencies are embedded in the launcher JAR."
+}

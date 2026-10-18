@@ -1,0 +1,20 @@
+[Unit]
+Description=iptv-nas IPTV live source service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# 按实际部署路径修改下面两行
+WorkingDirectory=/opt/iptv-nas
+ExecStart=/usr/bin/python3 /opt/iptv-nas/app/main.py
+Restart=always
+RestartSec=10
+# P0-6 资源上限：常驻内存 <= 200MB
+MemoryMax=200M
+# 日志交给 journald（应用自身另有 data/logs 轮转文件，双保险）
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

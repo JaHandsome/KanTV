@@ -1,0 +1,7 @@
+{
+  "blacklist_host_prefixes": ["39.134.", "39.135."],
+  "blacklist_domains": ["vpstv", "kylintv", "freetv.fun", "tvbox6.icu", "live.264788.xyz", "hellotvvod.com", "f13h.mine.nu", "jdshipin.com", "smt.1678520.xyz", "tvfix.org", "m16tv.cfd", "74.91.26.218", "live4play.uk"],
+  "flaky_domains": ["t.061899.xyz"],
+  "unsupported_schemes": ["rtmp", "rtsp", "rtp", "udp", "p2p", "mitv", "zlive", "tvbus"],
+  "_note": "blacklist_host_prefixes: 命中 host 前缀直接拉黑(39.134/39.135 电信 IPTV 网关段，需机顶盒认证永久不可达)；blacklist_domains: host 包含即拉黑；flaky_domains: host 包含则降低 host 评分(探活权重降级，不入黑名单)；unsupported_schemes: 客户端不支持的协议 scheme 白名单(probe() 第一道前置拦截，命中即 status=unsupported 永久不探测，不发起任何网络请求；系统性覆盖原有的 hellotvvod.com(P2p)/f13h.mine.nu(rtmp) 人工拉黑，后者保留不删作兜底)。2026-09-10 增补: hellotvvod.com(P2p协议)/f13h.mine.nu(rtmp协议) 探测器无法验证; jdshipin.com/smt.1678520.xyz/tvfix.org/m16tv.cfd/74.91.26.218 系 2026-09-08 实测全灭的港台网关; live4play.uk 多频道反复失败"
+}

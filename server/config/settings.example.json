@@ -1,0 +1,82 @@
+{
+  "http": {
+    "host": "0.0.0.0",
+    "port": 8420,
+    "snippet_host": "localhost"
+  },
+  "schedule": {
+    "discovery_hours": 6,
+    "verify_hours": 2,
+    "probe_minutes": 30
+  },
+  "limits": {
+    "net_concurrency": 16,
+    "timeout_s": 8,
+    "verify_batch": 200,
+    "verify_budget_min": 25,
+    "max_lines_per_channel": 3
+  },
+  "paths": {
+    "db": "data/iptv.db",
+    "output_dir": "data/output",
+    "log_dir": "data/logs",
+    "seed_dir": "data/seed"
+  },
+  "network": {
+    "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120",
+    "retries": 2,
+    "backoff_s": 1.5,
+    "repo_fetch_limit": 2097152,
+    "probe_fetch_limit": 393216,
+    "jsdelivr_prefix": "https://cdn.jsdelivr.net/gh/",
+    "ghproxy_prefix": "https://gh-proxy.com/https://raw.githubusercontent.com/"
+  },
+  "health": {
+    "flaky_fail_streak": 2,
+    "dead_fail_streak": 3,
+    "recover_ok_streak": 2,
+    "dead_probe_every_rounds": 4,
+    "probe_read_limit": 512,
+    "throughput_enabled": true,
+    "throughput_every_rounds": 8,
+    "throughput_extra_candidates": 2,
+    "throughput_segments": 2,
+    "throughput_seg_timeout_s": 15,
+    "throughput_max_bytes": 8388608,
+    "throughput_window": 3,
+    "throughput_realtime_ratio": 1.0
+  },
+  "retention_days": 90,
+  "verify_cache_hours": 24,
+  "verify_quality_weak_enabled": true,
+  "blacklist_recheck_enabled": true,
+  "blacklist_recheck_hours": 168,
+  "blacklist_recheck_per_round": 5,
+  "dead_retention_days": 30,
+  "checks_retention_days": 7,
+  "orphan_retention_days": 30,
+  "discovery": {
+    "miner_enabled": true,
+    "miner_readme_per_round": 6,
+    "miner_validate_per_round": 5,
+    "miner_max_repos_per_round": 3
+  },
+  "client_caps": {},
+  "aes_probe_bytes": 65536,
+  "signed_url_params": [
+    "expires",
+    "expire",
+    "expires_at",
+    "token",
+    "securitykey",
+    "sign",
+    "signature",
+    "msisdn"
+  ],
+  "signed_url_params_by_host": {},
+  "expired_backoff_hours": 24,
+  "hub": {
+    "enabled": false,
+    "feedback_token": ""
+  }
+}

@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "status": "design_draft_not_connected_to_android",
+  "reviewedAt": "2026-09-08",
+  "presets": [
+    {
+      "id": "playlist_metadata",
+      "name": "跟随播放列表",
+      "proposedDefault": true,
+      "source": "imported_playlist_metadata",
+      "epgFields": ["x-tvg-url", "url-tvg"],
+      "channelIdField": "tvg-id",
+      "logoField": "tvg-logo"
+    },
+    {
+      "id": "fmm_chinese_metadata",
+      "name": "中文节目单与台标候选",
+      "enabledByDefault": false,
+      "projectUrl": "https://github.com/fanmingming/live",
+      "epgUrl": "https://live.fanmingming.cn/e.xml",
+      "logoBaseUrl": "https://live.fanmingming.cn/tv/",
+      "logoMapping": "requires_verified_catalog_do_not_guess_names",
+      "validation": {
+        "environment": "development_mac_not_target_tv_network",
+        "epg": "tls_connection_failed_curl_35",
+        "sampleLogo": "tls_connection_failed_curl_35",
+        "freshness": "not_checked",
+        "channelMatching": "not_checked"
+      }
+    },
+    {
+      "id": "iptv_org_metadata",
+      "name": "国际频道资料候选",
+      "enabledByDefault": false,
+      "projectUrl": "https://github.com/iptv-org/api",
+      "channelsUrl": "https://iptv-org.github.io/api/channels.json",
+      "logosUrl": "https://iptv-org.github.io/api/logos.json",
+      "validation": {
+        "channels": "downloaded_and_parsed",
+        "channelRecords": 31206,
+        "chinaChannelRecords": 749,
+        "logos": "not_checked",
+        "epgFreshness": "not_checked",
+        "userChannelMatching": "not_checked"
+      }
+    }
+  ],
+  "proposedPolicy": {
+    "uploadPlaylistToThirdParty": false,
+    "fetchDuringFirstFrame": false,
+    "updateEveryHours": 24,
+    "keepLastValidOnFailure": true,
+    "ambiguousMatch": "require_local_manual_selection",
+    "priority": ["manual_override", "playlist_explicit", "enabled_preset_fill_missing"],
+    "replacePlaybackUrls": false
+  }
+}

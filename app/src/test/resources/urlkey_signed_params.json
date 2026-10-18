@@ -1,0 +1,28 @@
+{
+  "global": [
+    "expires",
+    "expire",
+    "expires_at",
+    "token",
+    "securitykey",
+    "sign",
+    "signature",
+    "msisdn"
+  ],
+  "by_host": {
+    "edgeware.tvb.com": [
+      "sig",
+      "ts",
+      "c",
+      "ext_start_limit",
+      "int_start_limit"
+    ],
+    "scope-1.example.invalid": [
+      "sig",
+      "ts",
+      "c",
+      "ext_start_limit",
+      "int_start_limit"
+    ]
+  }
+}

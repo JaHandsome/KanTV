@@ -1,0 +1,33 @@
+Media3 FFmpeg audio decoder integration
+
+AndroidX Media3 1.11.0 decoder_ffmpeg module
+Commit: 2bc207851df311340767e913931ca7b28cab1794
+Source: https://github.com/androidx/media/tree/2bc207851df311340767e913931ca7b28cab1794/libraries/decoder_ffmpeg
+License: Apache License 2.0
+
+FFmpeg release/6.0 maintenance line, fixed commit:
+b37bf81a7a9782438e4fe06a249329e279694494
+Source: https://github.com/FFmpeg/FFmpeg/tree/b37bf81a7a9782438e4fe06a249329e279694494
+Enabled decoders: aac, ac3, eac3, mp2, mp3
+Build configuration license result: LGPL version 2.1 or later
+GPL, version3 and nonfree configuration options are disabled.
+
+AAR SHA256:
+82024db102de0681cda9d0816c2d4edf660a2b15a2434d4bda00ba6a223a39b5
+Corresponding source and relink materials:
+https://github.com/JaHandsome/KanTV/releases/download/ffmpeg-build-1.11.0-b37bf81-20261018/media3-ffmpeg-1.11.0-b37bf81-corresponding-source-r2.tar.gz
+Source bundle SHA256:
+4b9b0e60597a82048b51567dac72967fa3dff356c7587bd10f03f935f61f8596
+
+The corresponding-source archive includes original fixed upstream sources, build
+recipes and patches, effective configurations, JNI objects, FFmpeg static libraries,
+relink instructions, Apache/LGPL license texts, and the original NDK NOTICE and
+NOTICE.toolchain covering statically linked libc++ and relevant toolchain notices.
+
+The application uses this component as an audio decoding fallback when the Android
+platform decoder does not support the selected audio format.
+
+Source-materials revision r2 adds the complete Gradle launcher LICENSE/NOTICE
+and provenance, and a prominent change notice on the modified Media3 build
+script. The launcher matches official Gradle v7.4.2 bytes (shared by 7.4/7.4.1);
+it starts the separately pinned Gradle 8.11.1 distribution. The AAR is unchanged.

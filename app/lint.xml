@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lint>
+    <!-- The fixed-page Gecko integration never installs a notification or download
+         delegate. Do not request a new user permission for an unused utility bundled
+         inside Gecko's shaded ExoPlayer. All application notification calls remain checked. -->
+    <issue id="NotificationPermission">
+        <ignore regexp=".*usage from org\.mozilla\.thirdparty\.com\.google\.android\.exoplayer2\.util\.NotificationUtil.*" />
+    </issue>
+</lint>

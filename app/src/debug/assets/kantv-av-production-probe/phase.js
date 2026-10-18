@@ -1,0 +1,1 @@
+addEventListener('message',e=>{const phase=e.data&&e.data.__kantvFixturePhase;if(['playing','complete'].includes(phase))browser.runtime.sendNativeMessage('kantvAvProbe',{kind:'fixture_phase',phase,elapsedMs:performance.now()}).catch(()=>{});});

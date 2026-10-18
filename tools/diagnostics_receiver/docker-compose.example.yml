@@ -1,0 +1,35 @@
+services:
+  diagnostics-receiver:
+    build: .
+    restart: unless-stopped
+    environment:
+      DIAGNOSTICS_RECEIVER_TOKEN_FILE: /run/secrets/diagnostics_receiver_token
+      UPDATE_RECEIVER_TOKEN_FILE: /run/secrets/update_receiver_token
+      DIAGNOSTICS_RECEIVER_STORAGE_DIR: /data/reports
+      DIAGNOSTICS_RECEIVER_RELEASE_DIR: /data/releases
+      DIAGNOSTICS_RECEIVER_HOST: 0.0.0.0
+      DIAGNOSTICS_RECEIVER_PORT: "8091"
+    secrets:
+      - diagnostics_receiver_token
+      - update_receiver_token
+    ports:
+      # 仅绑定 NAS 的内网 IP；不要填写 0.0.0.0，也不要设置路由器端口转发。
+      - "${DIAGNOSTICS_LAN_IP:?set NAS LAN IP}:${DIAGNOSTICS_PORT:-8091}:8091"
+    volumes:
+      - diagnostics_reports:/data/reports
+      # 管理员在宿主机离线发布；容器只有只读权限。
+      - "${KANTV_RELEASE_DIR:?set read-only release directory}:/data/releases:ro"
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+
+secrets:
+  diagnostics_receiver_token:
+    file: ./secrets/diagnostics_receiver_token
+  update_receiver_token:
+    file: ./secrets/update_receiver_token
+
+volumes:
+  diagnostics_reports:

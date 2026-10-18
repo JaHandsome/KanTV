@@ -1,0 +1,113 @@
+--- a/src/main/jni/build_ffmpeg.sh
++++ b/src/main/jni/build_ffmpeg.sh
+@@ -14,6 +14,9 @@
+ # See the License for the specific language governing permissions and
+ # limitations under the License.
+ #
++# Modified by KanTV: deterministic build arguments, host dependency isolation
++# and path normalization; notice added 2026-10-18.
++#
+ set -eu
+ 
+ FFMPEG_MODULE_PATH="$1"
+@@ -28,7 +31,7 @@
+ echo "Enabled decoders are ${ENABLED_DECODERS[@]}"
+ JOBS="$(nproc 2> /dev/null || sysctl -n hw.ncpu 2> /dev/null || echo 4)"
+ echo "Using $JOBS jobs for make"
+-COMMON_OPTIONS="
++COMMON_OPTIONS=(
+     --target-os=android
+     --enable-static
+     --disable-shared
+@@ -45,7 +48,10 @@
+     --extra-ldexeflags=-pie
+     --disable-v4l2-m2m
+     --disable-vulkan
+-    "
++    --disable-debug
++    --disable-autodetect
++    "--extra-cflags=-ffile-prefix-map=${FFMPEG_MODULE_PATH}=/src/decoder_ffmpeg -ffile-prefix-map=${NDK_PATH}=/opt/android-ndk"
++    )
+ TOOLCHAIN_PREFIX="${NDK_PATH}/toolchains/llvm/prebuilt/${HOST_PLATFORM}/bin"
+ if [[ ! -d "${TOOLCHAIN_PREFIX}" ]]
+ then
+@@ -55,7 +61,7 @@
+ 
+ for decoder in "${ENABLED_DECODERS[@]}"
+ do
+-    COMMON_OPTIONS="${COMMON_OPTIONS} --enable-decoder=${decoder}"
++    COMMON_OPTIONS+=("--enable-decoder=${decoder}")
+ done
+ 
+ ARMV7_CLANG="${TOOLCHAIN_PREFIX}/armv7a-linux-androideabi${ANDROID_ABI}-clang"
+@@ -73,6 +79,30 @@
+     ANDROID_ABI_64BIT=21
+ fi
+ 
++normalize_configuration() {
++    python3 - "$FFMPEG_MODULE_PATH" "$NDK_PATH" <<'PYCONFIG'
++from pathlib import Path
++import re, sys
++p = Path("config.h")
++s = p.read_text()
++lines = s.splitlines(keepends=True)
++for i, line in enumerate(lines):
++    if line.startswith("#define FFMPEG_CONFIGURATION "):
++        for actual, canonical in ((sys.argv[1], "/src/decoder_ffmpeg"), (sys.argv[2], "/opt/android-ndk")):
++            line = line.replace(actual, canonical)
++        lines[i] = line
++p.write_text("".join(lines))
++config = Path("ffbuild/config.mak").read_text()
++abi = re.search(r"^LIBDIR=\$\(DESTDIR\)android-libs/(.+)$", config, re.M).group(1)
++dest = Path("../../../native-configs") / abi
++dest.mkdir(parents=True, exist_ok=True)
++for filename in ("config.h", "config_components.h", "ffbuild/config.mak", "libavutil/avconfig.h"):
++    text = Path(filename).read_text()
++    for actual, canonical in ((sys.argv[1], "/src/decoder_ffmpeg"), (sys.argv[2], "/opt/android-ndk")):
++        text = text.replace(actual, canonical)
++    (dest / Path(filename).name).write_text(text)
++PYCONFIG
++}
+ cd "${FFMPEG_MODULE_PATH}/jni/ffmpeg"
+ ./configure \
+     --libdir=android-libs/armeabi-v7a \
+@@ -85,7 +115,8 @@
+     --strip="${TOOLCHAIN_PREFIX}/llvm-strip" \
+     --extra-cflags="-march=armv7-a -mfloat-abi=softfp" \
+     --extra-ldflags="-Wl,--fix-cortex-a8" \
+-    ${COMMON_OPTIONS}
++    "${COMMON_OPTIONS[@]}"
++normalize_configuration
+ make -j$JOBS
+ make install-libs
+ make clean
+@@ -98,7 +129,8 @@
+     --ar="${TOOLCHAIN_PREFIX}/llvm-ar" \
+     --ranlib="${TOOLCHAIN_PREFIX}/llvm-ranlib" \
+     --strip="${TOOLCHAIN_PREFIX}/llvm-strip" \
+-    ${COMMON_OPTIONS}
++    "${COMMON_OPTIONS[@]}"
++normalize_configuration
+ make -j$JOBS
+ make install-libs
+ make clean
+@@ -112,7 +144,8 @@
+     --ranlib="${TOOLCHAIN_PREFIX}/llvm-ranlib" \
+     --strip="${TOOLCHAIN_PREFIX}/llvm-strip" \
+     --disable-asm \
+-    ${COMMON_OPTIONS}
++    "${COMMON_OPTIONS[@]}"
++normalize_configuration
+ make -j$JOBS
+ make install-libs
+ make clean
+@@ -126,7 +159,8 @@
+     --ranlib="${TOOLCHAIN_PREFIX}/llvm-ranlib" \
+     --strip="${TOOLCHAIN_PREFIX}/llvm-strip" \
+     --disable-asm \
+-    ${COMMON_OPTIONS}
++    "${COMMON_OPTIONS[@]}"
++normalize_configuration
+ make -j$JOBS
+ make install-libs
+ make clean

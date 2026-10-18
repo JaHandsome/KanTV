@@ -1,0 +1,2 @@
+# Unified patch context uses a single space even for an empty source line.
+tools/ffmpeg/patches/*.patch whitespace=-blank-at-eol

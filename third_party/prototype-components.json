@@ -1,0 +1,37 @@
+{
+  "components": [
+    {
+      "name": "@floating-ui/core",
+      "version": "1.7.3",
+      "scope": "prototype/preview-standalone.html external script",
+      "license": "MIT",
+      "license_file": "third_party/floating-ui/LICENSE",
+      "license_sha256": "0e4c9a9b6c71019cbbea3bdc20b01223110a9035700f9c960c8fcbf78c2325ce",
+      "source": "https://github.com/floating-ui/floating-ui",
+      "package": "https://registry.npmjs.org/@floating-ui/core/-/core-1.7.3.tgz",
+      "package_sha256": "70f37f90d35c08bd62e5acbcf0e88dab2e6e989e85d88f7c89edcb3e029a2df2"
+    },
+    {
+      "name": "@floating-ui/dom",
+      "version": "1.7.4",
+      "scope": "prototype/preview-standalone.html external script",
+      "license": "MIT",
+      "license_file": "third_party/floating-ui/LICENSE",
+      "license_sha256": "0e4c9a9b6c71019cbbea3bdc20b01223110a9035700f9c960c8fcbf78c2325ce",
+      "source": "https://github.com/floating-ui/floating-ui",
+      "package": "https://registry.npmjs.org/@floating-ui/dom/-/dom-1.7.4.tgz",
+      "package_sha256": "e1463aab6ef54b60c01eecfd0a02e32f2f8140e9cef9355cefa9c3de80808d78"
+    },
+    {
+      "name": "lucide",
+      "version": "1.17.0",
+      "scope": "prototype/preview-standalone.html external script",
+      "license": "ISC and MIT for the listed Feather-derived icons",
+      "license_file": "third_party/lucide/LICENSE",
+      "license_sha256": "b495047bd93a9b06913511076f504daba17d5bbeb3e0650f3bb53a4220329c57",
+      "source": "https://github.com/lucide-icons/lucide",
+      "package": "https://registry.npmjs.org/lucide/-/lucide-1.17.0.tgz",
+      "package_sha256": "4732cbc44984880e4af95de00c0e1d93fbca9cf609282ff3e1c59df391e0302d"
+    }
+  ]
+}

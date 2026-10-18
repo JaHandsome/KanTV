@@ -1,0 +1,59 @@
+sequenceDiagram
+    autonumber
+    participant SCH as Scheduler线程
+    participant D as SourceDiscovery
+    Participant NET as NetClient
+    participant DB as Database(sqlite)
+    participant V as Verifier
+    participant H as HealthMonitor
+    participant B as OutputBuilder
+    participant HTTP as HttpServer
+    participant TV as TVBox/电视
+
+    Note over SCH: ==== 启动 ====
+    SCH->>DB: connect + migrate(schema_version)
+    SCH->>DB: 空库? import_seed(实测结果/gateway_map)
+    SCH->>B: build() 首次重建输出
+    SCH->>HTTP: serve_forever() 主线程常驻
+
+    Note over SCH: ==== 每 6h 源发现 (P0-1) ====
+    SCH->>D: tick_discovery()
+    D->>DB: 读 repos 表(enabled=1)
+    D->>NET: fetch_retry(jsdelivr_url(repo))
+    NET-->>D: m3u/txt 文本
+    D->>D: parser.parse + normalize + host_score
+    D->>D: apply_rules(rules.json 黑名单)
+    D->>DB: INSERT OR IGNORE sources(url_hash UNIQUE, candidate)
+    DB-->>D: 统计 new/dup/blocked
+    D-->>SCH: {discovered, new, dup, blocked}
+
+    Note over SCH: ==== 每 2h 增量验证 (P0-2) ====
+    SCH->>V: tick_verify(batch=200, budget=25min)
+    V->>DB: 取 candidate ORDER BY score DESC LIMIT 200
+    V->>NET: 并发16: probe(url) 实连→m3u8逐级→分片实收
+    NET-->>V: TS/fMP4/FLV 媒体级判定(av)
+    V->>DB: 每 URL 即时落库: verifications + sources(av,status=active)
+    Note over V: 时间预算到即返回(可中断续跑)
+    V-->>SCH: {verified, passed, rejected}
+
+    Note over SCH: ==== 每 30min 探活+容灾 (P0-3) ====
+    SCH->>H: tick_probe()
+    H->>DB: 取 active/flaky 源
+    H->>NET: 并发首字节探活(limit=512)
+    NET-->>H: alive/latency/reason
+    H->>DB: health_checks 落库 + 状态机跃迁
+    Note over H: fail_streak≥3→dead下线<br/>ok_streak≥2→active回归
+    H->>DB: health_events 记录跃迁
+    H->>DB: rebuild_lineups(每频道top3写lineups)
+    H->>B: 状态变更→build()
+    B->>DB: 读 lineups JOIN sources
+    B->>B: 渲染 txt/m3u/snippet
+    B->>B: atomic_write(.tmp→os.replace)
+    B-->>SCH: {channels, files}
+
+    Note over HTTP,TV: ==== 订阅 (P0-5, 常驻) ====
+    TV->>HTTP: GET http://NAS:8420/live.txt
+    HTTP->>HTTP: 读 data/output/live.txt(只读)
+    HTTP-->>TV: 200 完整文件(原子替换保证非残缺)
+
+    Note over SCH: 任何 tick 内异常<br/>捕获在任务粒度→日志→循环继续

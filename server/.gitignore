@@ -1,0 +1,17 @@
+# iptv-nas → kantv/server 忽略规则
+# ⚠️ 必须与 .dockerignore 保持一致：密钥材料既不入仓库、也不入镜像层。
+# 2026-09-25：已并入 kantv 仓库（本文件在 server/ 内生效；仓库根 .gitignore 有同效规则兜底）。
+
+__pycache__/
+*.pyc
+
+# 运行期数据（生产在 NAS；本地 data/ 是开发快照，且含 iptv.db/output/logs）
+data/
+
+# 枢纽密钥材料：token 明文（config/settings.json 里的 hub.feedback_token 同源）
+config/settings.json
+config/hub_client_token.txt
+
+# 备份目录 / 隔离区（NAS 侧命名 `<name>.bak.<tag>` + 本地清理隔离区）
+*.bak.*/
+.trash_*/

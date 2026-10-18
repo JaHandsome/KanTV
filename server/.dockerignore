@@ -1,0 +1,15 @@
+# Build-context allowlist: runtime settings, tokens, subscriptions, seeds, logs,
+# private deployment instructions and databases never reach the Docker daemon.
+**
+!Dockerfile
+!.dockerignore
+# Including a directory also includes descendants: exclude them again first.
+!app/
+app/**
+!app/*.py
+!tools/
+tools/**
+!tools/init_config.py
+!config/
+config/**
+!config/settings.example.json

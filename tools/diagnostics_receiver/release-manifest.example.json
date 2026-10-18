@@ -1,0 +1,10 @@
+{
+  "applicationId": "com.kantv.app.diagnostic",
+  "versionCode": 8,
+  "versionName": "0.1.7-diagnostic",
+  "apkPath": "kantv-diagnostic.apk",
+  "size": 12345678,
+  "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "signingCertSha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "publishedAt": "2026-09-10T12:00:00Z"
+}

@@ -1,0 +1,107 @@
+classDiagram
+    direction TB
+
+    class Config {
+        +dict settings
+        +dict channels
+        +list rules
+        +list repos
+        +load() Config
+        +http_base() str
+    }
+    class Database {
+        -sqlite3.Connection conn
+        +connect(path) Database
+        +migrate()
+        +execute(sql, params)
+        +query(sql, params) list~dict~
+        +cleanup(retention_days)
+        +close()
+    }
+    class NetClient {
+        -Semaphore gate
+        +fetch(url, timeout, limit, ua) (status, bytes, content_type)
+        +fetch_retry(url, retries, backoff) bytes   # 仅瞬态网络/指定 HTTP 状态重试；策略拒绝/永久状态立即失败
+        +jsdelivr_url(repo, branch, path) str
+        +ghproxy_url(repo, branch, path) str
+    }
+    class ChannelParser {
+        +parse_m3u(text) list~Entry~
+        +parse_txt(text) list~Entry~
+        +normalize_channel(name) str
+        +classify(name) str
+        +normalize_url(url) str
+        +url_hash(url) str
+        +host_score(host) int
+    }
+    class SourceDiscovery {
+        -NetClient net
+        -Database db
+        -ChannelParser parser
+        +run() dict
+        -fetch_repo(repo_row) text
+        -ingest(entries, origin)
+        -apply_rules(entry) bool
+    }
+    class Verifier {
+        -NetClient net
+        -Database db
+        +run(batch_size, time_budget_s) dict
+        +probe(url, ua) dict
+        -probe_m3u8(url, ua) dict
+        -probe_flv(url, ua) dict
+        -sniff_segment(url, ua, depth) str
+        -parse_ts(data) tuple
+        -ts_judge(data) str
+        -mp4_judge(data) str
+        -record(source_id, result)
+    }
+    class HealthMonitor {
+        -NetClient net
+        -Database db
+        +run() dict
+        -probe_alive(url, ua) tuple
+        -on_check(source, alive)
+        +rebuild_lineups()
+    }
+    class OutputBuilder {
+        -Database db
+        -Config cfg
+        +build() dict
+        -render_txt(items) str
+        -render_m3u(items) str
+        -render_snippet() str
+        -atomic_write(path, content)
+    }
+    class HttpServer {
+        -ThreadingHTTPServer httpd
+        +serve_forever()
+        -handle(req)
+    }
+    class Scheduler {
+        -Database db
+        -ThreadPoolExecutor pool
+        -dict last_run
+        -dict running
+        +loop()
+        -tick_discovery()
+        -tick_verify()
+        -tick_probe()
+        -tick_rebuild()
+    }
+
+    Config --> Database : db 路径
+    Config --> SourceDiscovery : repos/rules
+    Scheduler --> SourceDiscovery : 每 6h
+    Scheduler --> Verifier : 每 2h 增量
+    Scheduler --> HealthMonitor : 每 30min
+    Scheduler --> OutputBuilder : 状态变更后
+    SourceDiscovery --> ChannelParser : 解析/归一化
+    SourceDiscovery --> Database : 写 sources/repos
+    SourceDiscovery --> NetClient : 拉仓库文件
+    Verifier --> NetClient : 实连/分片
+    Verifier --> Database : 写 verifications/sources
+    HealthMonitor --> NetClient : 首字节探活
+    HealthMonitor --> Database : 写 health_*/lineups
+    OutputBuilder --> Database : 读 lineups/sources
+    HttpServer ..> OutputBuilder : 只读原子替换产物

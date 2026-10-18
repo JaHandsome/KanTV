@@ -1,0 +1,40 @@
+{
+  "media3": {
+    "version": "1.11.0",
+    "tag_object": "91fd5df7ab6b5c2f1a589fbdee5ee8deeae97f02",
+    "commit": "2bc207851df311340767e913931ca7b28cab1794",
+    "url": "https://codeload.github.com/androidx/media/tar.gz/2bc207851df311340767e913931ca7b28cab1794",
+    "archive": "media3-2bc207851df311340767e913931ca7b28cab1794.tar.gz",
+    "sha256": "81ae974cd2795c0f6020c73d999e7dac38ff92cd052a3e9e8f1b714fe9f2f7da"
+  },
+  "ffmpeg": {
+    "version": "6.0-branch-b37bf81a7a97",
+    "commit": "b37bf81a7a9782438e4fe06a249329e279694494",
+    "url": "https://codeload.github.com/FFmpeg/FFmpeg/tar.gz/b37bf81a7a9782438e4fe06a249329e279694494",
+    "archive": "ffmpeg-b37bf81a7a9782438e4fe06a249329e279694494.tar.gz",
+    "sha256": "21f26e9cec8982388033f7ab6673c4e1519649562d9efeee728c3474e94b986f"
+  },
+  "ndk": "28.2.13676358",
+  "cmake": "3.22.1",
+  "agp": "8.10.1",
+  "gradle": "8.11.1",
+  "android_api": 21,
+  "compile_sdk": 36,
+  "decoders": [
+    "aac",
+    "ac3",
+    "eac3",
+    "mp2",
+    "mp3"
+  ],
+  "abis": [
+    "armeabi-v7a",
+    "arm64-v8a",
+    "x86",
+    "x86_64"
+  ],
+  "source_date_epoch": 1700000000,
+  "module_min_sdk": 23,
+  "annotation": "1.6.0",
+  "checker_qual": "3.13.0"
+}

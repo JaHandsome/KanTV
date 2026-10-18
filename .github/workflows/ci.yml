@@ -1,0 +1,61 @@
+name: KanTV checks
+
+on:
+  push:
+    branches: [main, 'codex/**']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kantv-checks-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  android:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Set up JDK 17
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        with:
+          cache-read-only: ${{ github.event_name == 'pull_request' }}
+      - name: Install Android build SDK
+        run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0"
+      - name: Android unit tests, build and lint
+        run: ./gradlew :app:testDebugUnitTest :app:assembleDebug :app:lintDebug --console=plain
+      - name: Gecko resource regression checks
+        run: |
+          node tools/test_gecko_audio_observer.cjs
+          node tools/test_gecko_frame_observer.cjs
+          node tools/test_gecko_startup_resource.cjs
+
+  server-offline:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Public source privacy check
+        run: |
+          python3 tools/check_public_tree.py
+          python3 tools/check_public_history.py
+          python3 -m unittest discover -s tools -p 'test_public*.py'
+      - name: Server offline tests (runner Python 3.12, no pip dependencies)
+        run: python3.12 server/tests/run_offline.py

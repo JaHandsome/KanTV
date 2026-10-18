@@ -1,0 +1,34 @@
+{
+  "manifest_version": 2,
+  "name": "KanTV MSE Mirror Bridge",
+  "version": "1.21",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "kantv-mirror@kantv.local"
+    }
+  },
+  "permissions": [
+    "tabs",
+    "nativeMessaging",
+    "nativeMessagingFromContent",
+    "geckoViewAddons"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://tv.cctv.com/*",
+        "https://www.yangshipin.cn/*",
+        "https://yangshipin.cn/*",
+        "https://*.gdtv.cn/*",
+        "https://*.yicai.com/*"
+      ],
+      "js": [
+        "startup-resource.js",
+        "bridge.js"
+      ],
+      "all_frames": true,
+      "match_about_blank": true,
+      "run_at": "document_start"
+    }
+  ]
+}

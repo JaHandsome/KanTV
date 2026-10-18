@@ -1,0 +1,1516 @@
+<!doctype html>
+<html lang="en" data-visualize-standalone>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; style-src 'unsafe-inline' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; img-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; font-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; media-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; worker-src blob:; connect-src blob: data:; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<title>Preview</title>
+<style>:root{color-scheme:light dark;background:light-dark(rgb(255 255 255), rgb(24 24 24))}html,body{margin:0}body{box-sizing:border-box;padding:1rem;background:inherit}iframe{display:block;width:100%;height:calc(100vh - 2rem);margin:0 auto;border:0}</style>
+</head>
+<body>
+<iframe sandbox="allow-scripts" referrerpolicy="no-referrer" title="Preview" srcdoc="&lt;!doctype html&gt;
+&lt;html lang=&quot;en&quot; data-visualize-standalone&gt;
+&lt;head&gt;
+&lt;meta charset=&quot;utf-8&quot;&gt;
+&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;&gt;
+&lt;meta name=&quot;referrer&quot; content=&quot;no-referrer&quot;&gt;
+&lt;meta http-equiv=&quot;Content-Security-Policy&quot; content=&quot;default-src &#x27;none&#x27;; script-src &#x27;unsafe-inline&#x27; &#x27;unsafe-eval&#x27; &#x27;wasm-unsafe-eval&#x27; blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; style-src &#x27;unsafe-inline&#x27; blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; img-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; font-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; media-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; worker-src blob:; connect-src blob: data:; frame-src &#x27;none&#x27;; object-src &#x27;none&#x27;; base-uri &#x27;none&#x27;; form-action &#x27;none&#x27;&quot;&gt;
+&lt;title&gt;Preview&lt;/title&gt;
+&lt;style&gt;:root {
+  color-scheme: light dark;
+  background-color: var(
+    --background,
+    var(--color-background-primary, light-dark(rgb(255 255 255), rgb(24 24 24)))
+  ) !important;
+
+  /* Agent-facing contract; keep in sync with SKILL.md. */
+  --background: var(
+    --color-background-primary,
+    light-dark(rgb(255 255 255), rgb(24 24 24))
+  );
+  --foreground: var(
+    --color-text-primary,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --card: color-mix(in oklab, var(--foreground) 5%, var(--background));
+  --card-foreground: var(
+    --color-text-primary,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --popover: var(
+    --color-background-secondary,
+    light-dark(rgb(255 255 255), rgb(45 45 45))
+  );
+  --popover-foreground: var(
+    --color-text-primary,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --primary: var(
+    --color-text-info,
+    light-dark(rgb(51 156 255), rgb(131 195 255))
+  );
+  --primary-foreground: var(
+    --color-text-inverse,
+    light-dark(rgb(255 255 255), rgb(13 13 13))
+  );
+  --secondary: var(
+    --color-background-secondary,
+    light-dark(rgb(255 255 255 / 96%), rgb(54 54 54 / 96%))
+  );
+  --secondary-foreground: var(
+    --color-text-primary,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --muted: color-mix(in srgb, var(--foreground) 10%, transparent);
+  --muted-foreground: var(
+    --color-text-secondary,
+    light-dark(rgb(26 28 31 / 49.4%), rgb(255 255 255 / 49.8%))
+  );
+  --accent: var(
+    --color-background-info,
+    light-dark(rgb(229 242 255), rgb(13 39 63))
+  );
+  --accent-foreground: var(
+    --color-text-info,
+    light-dark(rgb(51 156 255), rgb(131 195 255))
+  );
+  --destructive: var(
+    --color-text-warning,
+    light-dark(rgb(226 85 7), rgb(255 133 73))
+  );
+  --border: var(
+    --color-border-secondary,
+    light-dark(rgb(26 28 31 / 8%), rgb(255 255 255 / 8.2%))
+  );
+  --input: var(
+    --color-border-primary,
+    light-dark(
+      rgb(26 28 31 / 11.8%),
+      color-mix(in oklab, rgb(0 0 0) 10%, transparent)
+    )
+  );
+  --ring: var(
+    --color-ring-primary,
+    light-dark(rgb(51 156 255), rgb(131 195 255 / 76%))
+  );
+  --font-size-base: var(--font-text-md-size, 14px);
+  --blue: light-dark(rgb(51 156 255), rgb(51 156 255));
+  --orange: light-dark(rgb(226 85 7), rgb(251 106 34));
+  --green: light-dark(rgb(0 162 64), rgb(64 201 119));
+  --red: light-dark(rgb(224 46 42), rgb(255 103 100));
+  --purple: light-dark(rgb(146 79 247), rgb(173 123 249));
+  --yellow: light-dark(rgb(255 195 0), rgb(255 210 64));
+  --viz-series-1: var(--primary);
+  --viz-series-2: light-dark(rgb(243 136 59), rgb(245 154 86));
+  --viz-series-3: light-dark(rgb(93 201 119), rgb(116 213 139));
+  --viz-series-4: light-dark(rgb(235 119 177), rgb(240 143 192));
+  --viz-series-5: light-dark(rgb(155 121 236), rgb(170 145 239));
+  --viz-series-6: light-dark(rgb(58 185 177), rgb(90 203 194));
+
+  /* Internal implementation variables; not part of the agent contract. */
+  --font-sans: -apple-system, system-ui, &quot;Segoe UI&quot;, sans-serif;
+  --font-mono:
+    ui-monospace, SFMono-Regular, &quot;SF Mono&quot;, Menlo, Consolas, &quot;Liberation Mono&quot;,
+    monospace;
+  --font-size-normal: max(11px, var(--font-size-base));
+  --font-size-tooltip: calc(var(--font-size-base) - 1px);
+  --font-size-small: max(11px, calc(var(--font-size-base) - 2px));
+  --font-size-h1: calc(var(--font-size-normal) * 1.7142857143);
+  --font-size-h2: calc(var(--font-size-normal) * 1.4285714286);
+  --font-size-h3: calc(var(--font-size-normal) * 1.2857142857);
+  --font-weight-normal: 430;
+  --font-weight-medium: 500;
+  --icon-size: 16px;
+  --line-height-normal: calc(var(--font-size-normal) * 1.5);
+  --line-height-tooltip: calc(var(--font-size-tooltip) * 1.4285714286);
+  --line-height-small: calc(var(--font-size-small) + 4px);
+  --corner-shape: round;
+  --radius: var(--border-radius-lg, 10px);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-2xl: calc(var(--radius) * 1.6);
+  --radius-full: 9999px;
+  --shadow-sm: 0 1px 2px -1px rgb(0 0 0 / 8%);
+  --checkmark-image: url(&quot;data:image/svg+xml,%3Csvg xmlns=&#x27;http://www.w3.org/2000/svg&#x27; viewBox=&#x27;0 0 17 17&#x27;%3E%3Cpath d=&#x27;M12.8961 3.64101C13.1297 3.41418 13.4984 3.37523 13.7779 3.56581C14.0571 3.75635 14.1554 4.11331 14.0299 4.41347L13.9615 4.53847L7.71151 13.7045C7.59411 13.8767 7.4063 13.9877 7.19881 14.0072C6.99136 14.0267 6.78564 13.9533 6.63826 13.806L2.88826 10.056L2.79842 9.9457C2.6192 9.67407 2.64927 9.30496 2.88826 9.06581C3.12738 8.82669 3.49647 8.79676 3.76815 8.97597L3.8785 9.06581L7.03084 12.2182L12.8053 3.74941L12.8961 3.64101Z&#x27;/%3E%3C/svg%3E&quot;);
+
+  /* Legacy aliases; not part of the current agent contract. */
+  --viz-bg: transparent;
+  --viz-panel: var(--card);
+  --viz-border: var(--border);
+  --viz-text: var(--foreground);
+  --viz-muted: var(--muted-foreground);
+  --viz-accent: var(--primary);
+  --viz-accent-text: var(--primary-foreground);
+  --viz-accent-bg: var(--accent);
+  --viz-font-size: var(--font-size-base);
+  --viz-warning: var(--destructive);
+}
+
+:root[data-theme=&quot;light&quot;] {
+  color-scheme: light;
+}
+
+:root[data-theme=&quot;dark&quot;] {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html &gt; body {
+  /* Preserve MCP aliases for older inline renderers without creating :root cycles. */
+  --color-background-primary: var(
+    --background,
+    light-dark(rgb(255 255 255), rgb(24 24 24))
+  );
+  --color-text-primary: var(
+    --foreground,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --color-border-secondary: var(
+    --border,
+    light-dark(rgb(26 28 31 / 8%), rgb(255 255 255 / 8.2%))
+  );
+
+  margin: 0;
+  padding: var(--visualize-paint-gutter, 0px);
+  color: var(--foreground);
+  background: transparent !important;
+  font-family: var(--font-sans) !important;
+  font-size: var(--font-size-normal);
+  font-weight: var(--font-weight-normal);
+  line-height: var(--line-height-normal);
+}
+
+a {
+  color: color-mix(in srgb, var(--viz-accent) 80%, var(--viz-text) 20%);
+  cursor: pointer;
+  font-weight: var(--font-weight-medium, 500);
+  text-decoration: none;
+  text-underline-offset: 2px;
+}
+
+a:is(:hover, :focus-visible) {
+  text-decoration-line: underline;
+  text-decoration-style: dashed;
+  text-decoration-thickness: 0.5px;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p {
+  margin-block: 0;
+}
+
+h1 {
+  font-size: var(--font-size-h1);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.25;
+}
+
+h2 {
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.25;
+}
+
+h3,
+h4,
+h5,
+h6 {
+  font-size: var(--font-size-h3);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.3;
+}
+
+b,
+strong,
+th {
+  font-weight: var(--font-weight-medium);
+}
+
+code:not(pre code) {
+  display: inline;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  corner-shape: var(--corner-shape);
+  background: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  overflow-wrap: anywhere;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  word-break: break-word;
+}
+
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  color: var(--foreground);
+  font: inherit;
+  text-align: start;
+}
+
+.table :is(th, td) {
+  padding-block: 10px;
+  padding-inline: 0 24px;
+  overflow-wrap: anywhere;
+  border-bottom: 1px solid var(--border);
+  text-align: start;
+  vertical-align: top;
+}
+
+.table-responsive &gt; .table :is(th, td) {
+  overflow-wrap: break-word;
+}
+
+.table :is(th, td):last-child {
+  padding-inline-end: 0;
+}
+
+.table :is(caption, thead th) {
+  font-weight: 600;
+}
+
+.table thead th {
+  padding-block: 8px;
+  border-bottom-color: color-mix(in srgb, var(--foreground) 16%, transparent);
+}
+
+.table tbody tr:last-child :is(th, td) {
+  border-bottom: 0;
+}
+
+.table.table-sm :is(th, td) {
+  padding-block: 6px;
+}
+
+.table.table-sm :is(th, td):not(:last-child) {
+  padding-inline-end: 16px;
+}
+
+.table :is(.text-end, [align=&quot;right&quot;]) {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+.table :is(.text-center, [align=&quot;center&quot;]) {
+  text-align: center;
+}
+
+.table .text-nowrap {
+  white-space: nowrap;
+}
+
+#widget {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  padding: 0;
+  background: transparent !important;
+}
+
+.card {
+  min-width: 0;
+  padding: 12px;
+  overflow: hidden;
+  overflow-wrap: break-word;
+  border-radius: var(--radius-2xl);
+  corner-shape: var(--corner-shape);
+  color: var(--card-foreground);
+  background: var(--card);
+}
+
+#widget &gt; :not(.card, .progress) {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.tooltip {
+  position: fixed;
+  z-index: 50;
+  top: 0;
+  left: 0;
+  width: max-content;
+  max-width: min(
+    20rem,
+    var(--tooltip-available-width, calc(100vw - 10px)),
+    calc(100vw - 10px)
+  );
+  max-height: min(
+    var(--tooltip-available-height, calc(100vh - 10px)),
+    calc(100vh - 10px)
+  );
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  corner-shape: var(--corner-shape);
+  color: var(--popover-foreground);
+  background: var(--popover);
+  box-shadow: none;
+  font-size: var(--font-size-tooltip);
+  line-height: var(--line-height-tooltip);
+  overflow-wrap: break-word;
+  white-space: normal;
+  pointer-events: none;
+  user-select: none;
+}
+
+.viz-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(max(180px, 24%), 1fr));
+  gap: 10px;
+}
+
+.viz-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.viz-stat-value {
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.25;
+}
+
+.viz-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+hr {
+  width: 100%;
+  height: 1px;
+  margin-block: 6px;
+  border: 0;
+  background: var(--border);
+}
+
+.nav {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 4px;
+}
+
+.progress {
+  display: flex;
+  height: 8px;
+  margin-block: calc((var(--line-height-normal, 1.5em) - 8px) / 2);
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--muted);
+}
+
+.progress-bar:only-child {
+  border-radius: var(--radius-full);
+}
+
+.progress-bar {
+  height: 100%;
+  flex-shrink: 0;
+  border: 0;
+  background: var(--viz-series-1);
+}
+
+.viz-badge {
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  color: var(--accent-foreground);
+  background: var(--accent);
+  font-weight: var(--font-weight-medium);
+}
+
+small,
+.text-small,
+.viz-badge {
+  font-size: var(--font-size-small);
+  line-height: var(--line-height-small);
+}
+
+.text-muted {
+  color: var(--muted-foreground);
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.viz-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.viz-controls &gt; .form-label {
+  display: grid;
+  min-width: min(100%, 260px);
+  flex: 1 1 280px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 2px 12px;
+  margin-bottom: 0;
+}
+
+.viz-controls &gt; .form-label &gt; :is(.form-control, .form-range, .form-select) {
+  grid-column: 1 / -1;
+}
+
+.btn,
+.nav-link,
+.form-check-input,
+.form-control,
+.form-range,
+.form-select {
+  font: inherit;
+}
+
+.btn,
+.nav-link {
+  appearance: button;
+  display: inline-flex;
+  inline-size: fit-content;
+  max-inline-size: 100%;
+  min-height: 28px;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin: 0;
+  padding: 0 8px;
+  -webkit-app-region: no-drag;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-lg);
+  corner-shape: var(--corner-shape);
+  color: var(--secondary-foreground);
+  background: var(--secondary);
+  cursor: var(--cursor-interaction, pointer);
+  text-align: center;
+  text-decoration: none;
+  white-space: nowrap;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+.btn:is(.btn-block, .viz-tile) {
+  inline-size: 100%;
+}
+
+.btn.viz-tile {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+a.btn {
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.btn:not(:disabled):hover,
+.nav-link:not(:disabled):not([aria-disabled=&quot;true&quot;]):hover {
+  background: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.btn-primary {
+  border-color: transparent;
+  color: var(--primary-foreground);
+  background: var(--foreground);
+  background-clip: padding-box;
+}
+
+.btn-primary .text-muted {
+  color: color-mix(in srgb, var(--primary-foreground) 50%, transparent);
+}
+
+.btn-primary:not(:disabled):hover {
+  background: color-mix(in srgb, var(--foreground) 80%, transparent);
+  background-clip: padding-box;
+}
+
+.btn-ghost {
+  border-color: transparent;
+  color: var(--muted-foreground);
+  background: transparent;
+}
+
+.btn-ghost:not(:disabled):hover {
+  color: var(--foreground);
+  background: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.nav-pills .nav-link {
+  min-width: 0;
+  border-color: transparent;
+  color: var(--muted-foreground);
+  background: transparent;
+}
+
+.nav-justified .nav-link {
+  flex: 1 1 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.nav-pills .nav-link.active {
+  color: var(--foreground);
+  background: var(--muted);
+}
+
+.btn:disabled,
+.nav-link:disabled,
+.nav-link[aria-disabled=&quot;true&quot;] {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+[data-lucide] {
+  stroke-width: 1.6;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--foreground);
+}
+
+.form-control {
+  display: block;
+  width: 100%;
+  min-height: 28px;
+  padding: 0 8px;
+  outline: none;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-lg);
+  corner-shape: var(--corner-shape);
+  color: var(--foreground);
+  background: var(--secondary);
+}
+
+.form-control::placeholder {
+  color: var(--muted-foreground);
+}
+
+.form-control[type=&quot;file&quot;] {
+  padding: 0;
+  overflow: hidden;
+  cursor: var(--cursor-interaction, pointer);
+}
+
+.form-control[type=&quot;file&quot;]::file-selector-button {
+  min-height: 26px;
+  margin-right: 8px;
+  padding: 0 8px;
+  border: 0;
+  border-right: 1px solid var(--input);
+  color: var(--secondary-foreground);
+  background: var(--secondary);
+  cursor: inherit;
+  font: inherit;
+}
+
+.form-control[type=&quot;file&quot;]:not(:disabled):hover::file-selector-button {
+  background: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.form-control-color[type=&quot;color&quot;] {
+  width: 40px;
+  height: 28px;
+  padding: 3px;
+  cursor: var(--cursor-interaction, pointer);
+}
+
+.form-control-color[type=&quot;color&quot;]::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.form-control-color[type=&quot;color&quot;]::-webkit-color-swatch {
+  border: 0;
+  border-radius: calc(var(--radius-lg) - 4px);
+  corner-shape: var(--corner-shape);
+}
+
+textarea.form-control {
+  height: auto;
+  min-height: 72px;
+  padding: 8px 10px;
+  resize: vertical;
+}
+
+.form-control:focus-visible {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-control:disabled,
+.form-select:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.form-select {
+  appearance: none;
+  display: block;
+  width: 100%;
+  min-height: 28px;
+  margin: 0;
+  padding: 0 32px 0 8px;
+  outline: none;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-lg);
+  corner-shape: var(--corner-shape);
+  color: var(--foreground);
+  background-color: var(--secondary);
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted-foreground) 50%),
+    linear-gradient(135deg, var(--muted-foreground) 50%, transparent 50%);
+  background-position:
+    calc(100% - 14px) 50%,
+    calc(100% - 10px) 50%;
+  background-repeat: no-repeat;
+  background-size: 4px 4px;
+  cursor: var(--cursor-interaction, default);
+}
+
+.form-select:not(:disabled):hover {
+  background-color: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.form-select:focus-visible {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-check {
+  display: flex;
+  min-height: 20px;
+  align-items: center;
+  gap: 6px;
+}
+
+.form-check-input {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  margin: 0;
+  border: 1px solid var(--input);
+  color: var(--primary-foreground);
+  background-color: transparent;
+  cursor: var(--cursor-interaction, default);
+  transition:
+    background-color 150ms,
+    border-color 150ms,
+    box-shadow 150ms;
+}
+
+.form-check:not(.form-switch) .form-check-input[type=&quot;checkbox&quot;] {
+  border-color: var(--input);
+  border-radius: var(--radius-sm);
+  corner-shape: var(--corner-shape);
+  background-color: var(--secondary);
+  box-shadow: var(--shadow-sm);
+}
+
+.form-check:not(.form-switch)
+  .form-check-input:not(:disabled):not(:checked):hover {
+  background-color: var(--card);
+}
+
+.form-check:not(.form-switch) .form-check-input[type=&quot;checkbox&quot;]:checked {
+  border-color: var(--primary);
+  background-color: var(--primary);
+}
+
+.form-check:not(.form-switch)
+  .form-check-input[type=&quot;checkbox&quot;]:checked::before {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--primary-foreground);
+  content: &quot;&quot;;
+  mask: var(--checkmark-image) center / 12px 12px no-repeat;
+}
+
+.form-check-input[type=&quot;radio&quot;] {
+  width: 14px;
+  height: 14px;
+  border-radius: var(--radius-full);
+}
+
+.form-check-input[type=&quot;radio&quot;]:checked {
+  border: 2px solid var(--primary);
+  background:
+    radial-gradient(circle, var(--primary-foreground) 0 2.5px, transparent 3px),
+    var(--primary);
+}
+
+.form-check:not(.form-switch) .form-check-input:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.form-check:not(.form-switch) .form-check-input:disabled {
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.form-check:not(.form-switch) .form-check-input:disabled + .form-check-label {
+  cursor: not-allowed;
+}
+
+.form-switch .form-check-input:disabled,
+.form-switch .form-check-input:disabled + .form-check-label {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.form-check-label {
+  color: var(--foreground);
+  cursor: var(--cursor-interaction, default);
+}
+
+.form-switch .form-check-input {
+  position: relative;
+  width: 32px;
+  height: 20px;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--muted);
+  box-shadow: none;
+  transition: background-color 200ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+.form-switch .form-check-input::before {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 16px;
+  height: 16px;
+  box-sizing: border-box;
+  border: 1px solid light-dark(var(--primary-foreground), var(--foreground));
+  border-radius: var(--radius-full);
+  background: light-dark(var(--primary-foreground), var(--foreground));
+  box-shadow: var(--shadow-sm);
+  content: &quot;&quot;;
+  transform: translate(2px, -50%);
+  transition: transform 200ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+.form-switch .form-check-input:checked {
+  background: var(--primary);
+}
+
+.form-switch .form-check-input:checked::before {
+  transform: translate(14px, -50%);
+}
+
+.form-switch .form-check-input:focus-visible {
+  box-shadow: 0 0 0 2px var(--ring);
+}
+
+.form-range {
+  appearance: none;
+  display: block;
+  width: 100%;
+  height: 28px;
+  flex: 1;
+  margin: 0;
+  padding: 0;
+  outline: none;
+  border: 0;
+  accent-color: var(--primary);
+  background: linear-gradient(
+      color-mix(in srgb, var(--foreground) 7%, transparent),
+      color-mix(in srgb, var(--foreground) 7%, transparent)
+    )
+    center / 100% 2px no-repeat;
+}
+
+.form-range::-webkit-slider-runnable-track {
+  height: 28px;
+  background: transparent;
+}
+
+.form-range::-webkit-slider-thumb {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  margin-top: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: light-dark(var(--primary-foreground), var(--foreground));
+}
+
+.form-range:focus-visible::-webkit-slider-thumb {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-range::-moz-range-track {
+  height: 28px;
+  background: transparent;
+}
+
+.form-range::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: light-dark(var(--primary-foreground), var(--foreground));
+}
+
+.form-range:focus-visible::-moz-range-thumb {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-range:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.btn:not(.btn-primary, .viz-tile):is(
+  [aria-pressed=&quot;true&quot;],
+  [aria-selected=&quot;true&quot;],
+  .is-selected
+) {
+  border-color: var(--primary);
+  color: var(--primary-foreground);
+  background: var(--primary);
+}
+
+.btn.viz-tile:is([aria-pressed=&quot;true&quot;], [aria-selected=&quot;true&quot;], .is-selected) {
+  border-color: var(--primary);
+  box-shadow: inset 0 0 0 1px var(--primary);
+}
+
+.btn:focus-visible,
+.nav-link:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+@media (pointer: coarse) {
+  .btn,
+  .nav-link,
+  .form-control,
+  .form-select {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  /* Keep small-screen WebKit from zooming when a text field receives focus. */
+  .form-control,
+  .form-select {
+    font-size: max(16px, var(--font-size-normal));
+  }
+
+  .form-control[type=&quot;file&quot;]::file-selector-button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .form-control-color[type=&quot;color&quot;] {
+    width: 44px;
+    height: 44px;
+  }
+
+  .form-control:is(
+    [type=&quot;date&quot;],
+    [type=&quot;datetime-local&quot;],
+    [type=&quot;month&quot;],
+    [type=&quot;time&quot;],
+    [type=&quot;week&quot;]
+  ) {
+    min-width: 0;
+    max-width: 100%;
+    padding-block: 8px;
+  }
+
+  .form-check {
+    min-height: 44px;
+    padding-inline: 15px;
+  }
+
+  .form-check-input {
+    position: relative;
+  }
+
+  .form-check-input::after {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 44px;
+    height: 44px;
+    content: &quot;&quot;;
+    transform: translate(-50%, -50%);
+  }
+
+  .form-check-label {
+    display: inline-flex;
+    min-width: 44px;
+    min-height: 44px;
+    align-items: center;
+  }
+
+  .form-range {
+    height: 44px;
+    touch-action: pan-y;
+  }
+
+  .form-range::-webkit-slider-runnable-track {
+    height: 44px;
+  }
+
+  .form-range::-moz-range-track {
+    height: 44px;
+  }
+
+  .form-range::-webkit-slider-thumb {
+    margin-top: 12px;
+  }
+}
+
+svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+#widget &gt; svg {
+  width: 100%;
+}
+
+/* Model-authored chart rules can otherwise stretch icons after these styles load. */
+svg.lucide {
+  display: block;
+  width: var(--icon-size) !important;
+  height: var(--icon-size) !important;
+  flex: none;
+  margin: 0 !important;
+  stroke-width: 1.6;
+}
+
+.text-warning,
+.text-destructive {
+  color: var(--destructive);
+}
+
+html&gt;body{padding:0}&lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;div id=&quot;kantv-preview&quot; aria-label=&quot;看电视交互原型&quot;&gt;
+  &lt;style&gt;
+    #kantv-preview{--kt-ink:light-dark(#17212a,#edf2f5);--kt-paper:light-dark(#f1f4f6,#172129);--kt-panel:light-dark(#e1e8ee,#22313c);--kt-line:light-dark(#9aaab7,#4c6372);--kt-focus:light-dark(#124f70,#bee6fb);--kt-onfocus:light-dark(#fff,#112430);font-family:&quot;PingFang SC&quot;,&quot;Microsoft YaHei&quot;,sans-serif;color:var(--kt-ink)}
+    #kantv-preview *{box-sizing:border-box}
+    #kantv-preview button,#kantv-preview select{font:inherit;cursor:pointer}
+    #kantv-preview .kt-lab{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:10px}
+    #kantv-preview .kt-lab select,#kantv-preview .kt-lab button{color:var(--kt-ink);background:var(--kt-paper);border:1px solid var(--kt-line);border-radius:6px;padding:8px 12px;min-height:40px}
+    #kantv-preview .kt-label{margin-right:4px}
+    #kantv-preview .kt-tv{background:var(--kt-paper);min-height:430px;position:relative;border-radius:12px;overflow:hidden;font-size:var(--kt-size,19px)}
+    #kantv-preview .kt-header{display:flex;justify-content:space-between;gap:16px;align-items:center;padding:18px 24px;border-bottom:1px solid var(--kt-line)}
+    #kantv-preview .kt-scene{min-height:430px;background:linear-gradient(155deg,#283e4c 0%,#4a6d6a 47%,#1b2c37 48%,#091920 100%);color:#f3f8fa;display:flex;align-items:center;justify-content:center;position:relative}
+    #kantv-preview .kt-program{text-align:center;letter-spacing:.16em;font-size:32px;font-weight:500}
+    #kantv-preview .kt-program small{display:block;font-size:14px;letter-spacing:.25em;margin-top:14px;color:#e0eded}
+    #kantv-preview .kt-channel-mark{position:absolute;top:24px;left:26px;font-size:18px;letter-spacing:.06em}
+    #kantv-preview .kt-overlay{position:absolute;inset:auto 0 0;background:var(--kt-paper);padding:22px 24px;border-top:1px solid var(--kt-line)}
+    #kantv-preview .kt-title{font-size:24px;font-weight:500;margin:0 0 12px}
+    #kantv-preview .kt-sub{font-size:15px;opacity:.8;margin:8px 0 12px}
+    #kantv-preview .kt-actions{display:flex;gap:10px;flex-wrap:wrap}
+    #kantv-preview .kt-item{display:block;background:transparent;border:2px solid transparent;color:var(--kt-ink);padding:13px 16px;min-height:48px;border-radius:7px;text-align:left;font-size:inherit}
+    #kantv-preview .kt-item small{display:block;font-size:14px;margin-top:7px;opacity:.8}
+    #kantv-preview .kt-item.kt-selected{background:var(--kt-focus);color:var(--kt-onfocus);border-color:var(--kt-focus)}
+    #kantv-preview .kt-side{position:absolute;inset:0 auto 0 0;width:44%;background:var(--kt-paper);padding:16px;display:flex;flex-direction:column;gap:5px}
+    #kantv-preview .kt-side .kt-title{padding:6px 14px}
+    #kantv-preview .kt-with-list .kt-program{margin-left:44%;font-size:24px}
+    #kantv-preview .kt-guide{padding:20px}
+    #kantv-preview .kt-guide-top{display:grid;grid-template-columns:38% 1fr;gap:22px;margin-bottom:18px;align-items:center}
+    #kantv-preview .kt-mini{min-height:130px;border-radius:8px}
+    #kantv-preview .kt-mini .kt-program{font-size:19px}
+    #kantv-preview .kt-mini .kt-channel-mark{display:none}
+    #kantv-preview .kt-grid{display:grid;grid-template-columns:23% 1fr 1fr;gap:5px}
+    #kantv-preview .kt-time{font-size:14px;padding:8px}
+    #kantv-preview .kt-rowname{padding:13px 8px;font-size:17px}
+    #kantv-preview .kt-grid .kt-item{background:var(--kt-panel);font-size:17px;min-width:0;overflow-wrap:anywhere}
+    #kantv-preview .kt-grid .kt-selected{background:var(--kt-focus)}
+    #kantv-preview .kt-with-groups{display:grid;grid-template-columns:170px minmax(0,1fr)}
+    #kantv-preview .kt-groups{padding:20px 12px;background:var(--kt-panel)}
+    #kantv-preview .kt-groups .kt-item{width:100%}
+    #kantv-preview .kt-settings{display:grid;grid-template-columns:34% 1fr;min-height:430px}
+    #kantv-preview .kt-setting-nav{background:var(--kt-panel);padding:22px 14px}
+    #kantv-preview .kt-setting-nav .kt-item{width:100%;padding:10px 14px}
+    #kantv-preview .kt-setting-body{padding:28px}
+    #kantv-preview .kt-setting-body .kt-item{width:100%;border-bottom:1px solid var(--kt-line);border-radius:0;margin-top:8px}
+    #kantv-preview .kt-status{min-height:430px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:12px;padding:30px;text-align:center}
+    #kantv-preview .kt-status .kt-title{margin:0}
+    #kantv-preview .kt-status .kt-sub{max-width:380px}
+    #kantv-preview .kt-remote{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:12px;align-items:center}
+    #kantv-preview .kt-remote button{background:var(--kt-paper);color:var(--kt-ink);border:1px solid var(--kt-line);border-radius:6px;min-width:46px;min-height:44px;padding:8px 12px}
+    #kantv-preview .kt-foot{font-size:12px;margin-top:10px;opacity:.8;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+    @media(max-width:560px){#kantv-preview .kt-tv{font-size:16px;min-height:430px}#kantv-preview .kt-side{width:60%}#kantv-preview .kt-with-list .kt-program{margin-left:60%;font-size:16px;letter-spacing:0}#kantv-preview .kt-guide{padding:12px}#kantv-preview .kt-guide-top{grid-template-columns:1fr;gap:12px}#kantv-preview .kt-mini{min-height:90px}#kantv-preview .kt-guide-top .kt-sub{display:none}#kantv-preview .kt-guide-top .kt-title{font-size:18px;margin:0}#kantv-preview .kt-grid{grid-template-columns:25% 1fr 1fr}#kantv-preview .kt-grid .kt-item,#kantv-preview .kt-rowname{font-size:14px;padding:10px 6px}#kantv-preview .kt-settings{grid-template-columns:1fr}#kantv-preview .kt-setting-nav{padding:10px;display:flex;flex-wrap:wrap;gap:4px}#kantv-preview .kt-setting-nav .kt-item{width:auto;font-size:14px}#kantv-preview .kt-setting-body{padding:20px}#kantv-preview .kt-with-groups{grid-template-columns:110px minmax(0,1fr)}#kantv-preview .kt-with-groups .kt-guide-top{display:none}#kantv-preview .kt-with-groups .kt-grid{grid-template-columns:1fr}#kantv-preview .kt-with-groups .kt-time{display:none}#kantv-preview .kt-groups{padding:12px 5px}#kantv-preview .kt-groups .kt-item{padding:10px 7px;font-size:14px}}
+  &lt;/style&gt;
+  &lt;div class=&quot;kt-lab&quot; aria-label=&quot;原型场景选择&quot;&gt;
+    &lt;label&gt;&lt;span class=&quot;kt-label&quot;&gt;页面&lt;/span&gt;&lt;select id=&quot;kt-page&quot;&gt;&lt;option value=&quot;player&quot;&gt;全屏播放&lt;/option&gt;&lt;option value=&quot;channels&quot;&gt;频道列表&lt;/option&gt;&lt;option value=&quot;guide&quot;&gt;节目表&lt;/option&gt;&lt;option value=&quot;settings&quot;&gt;设置&lt;/option&gt;&lt;/select&gt;&lt;/label&gt;
+    &lt;label&gt;&lt;span class=&quot;kt-label&quot;&gt;状态&lt;/span&gt;&lt;select id=&quot;kt-state&quot;&gt;&lt;option value=&quot;normal&quot;&gt;正常播放&lt;/option&gt;&lt;option value=&quot;loading&quot;&gt;加载&lt;/option&gt;&lt;option value=&quot;empty&quot;&gt;空列表&lt;/option&gt;&lt;option value=&quot;noepg&quot;&gt;无节目单&lt;/option&gt;&lt;option value=&quot;error&quot;&gt;播放失败&lt;/option&gt;&lt;/select&gt;&lt;/label&gt;
+    &lt;button type=&quot;button&quot; id=&quot;kt-reopen&quot;&gt;模拟重新打开&lt;/button&gt;
+  &lt;/div&gt;
+  &lt;div class=&quot;kt-tv&quot; id=&quot;kt-screen&quot;&gt;&lt;/div&gt;
+  &lt;div class=&quot;kt-remote&quot; aria-label=&quot;模拟遥控器&quot;&gt;
+    &lt;button type=&quot;button&quot; data-key=&quot;ArrowLeft&quot; aria-label=&quot;左方向键&quot;&gt;←&lt;/button&gt;&lt;button type=&quot;button&quot; data-key=&quot;ArrowUp&quot; aria-label=&quot;上方向键&quot;&gt;↑&lt;/button&gt;&lt;button type=&quot;button&quot; data-key=&quot;Enter&quot;&gt;确认&lt;/button&gt;&lt;button type=&quot;button&quot; data-key=&quot;ArrowDown&quot; aria-label=&quot;下方向键&quot;&gt;↓&lt;/button&gt;&lt;button type=&quot;button&quot; data-key=&quot;ArrowRight&quot; aria-label=&quot;右方向键&quot;&gt;→&lt;/button&gt;&lt;button type=&quot;button&quot; data-key=&quot;Escape&quot;&gt;返回&lt;/button&gt;
+  &lt;/div&gt;
+  &lt;div class=&quot;kt-foot&quot;&gt;&lt;span&gt;交互原型 · 虚构频道与模拟画面&lt;/span&gt;&lt;span id=&quot;kt-feedback&quot; aria-live=&quot;polite&quot;&gt;确认或左键打开频道列表&lt;/span&gt;&lt;/div&gt;
+  &lt;script&gt;
+  (()=&gt;{
+    const root=document.getElementById(&#x27;kantv-preview&#x27;),screen=root.querySelector(&#x27;#kt-screen&#x27;),pageSelect=root.querySelector(&#x27;#kt-page&#x27;),stateSelect=root.querySelector(&#x27;#kt-state&#x27;),feedback=root.querySelector(&#x27;#kt-feedback&#x27;);
+    const channels=[{name:&#x27;山野频道&#x27;,show:&#x27;山野之间&#x27;,next:&#x27;四季风物&#x27;,group:&#x27;纪实&#x27;},{name:&#x27;生活频道&#x27;,show:&#x27;家常味道&#x27;,next:&#x27;街巷人家&#x27;,group:&#x27;生活&#x27;},{name:&#x27;戏曲频道&#x27;,show:&#x27;梨园春色&#x27;,next:&#x27;经典选段&#x27;,group:&#x27;戏曲&#x27;},{name:&#x27;人文频道&#x27;,show:&#x27;行走中国&#x27;,next:&#x27;书香时光&#x27;,group:&#x27;纪实&#x27;}];
+    const groups=[&#x27;全部频道&#x27;,&#x27;收藏&#x27;,&#x27;纪实&#x27;,&#x27;生活&#x27;,&#x27;戏曲&#x27;],categories=[&#x27;通用&#x27;,&#x27;播放列表&#x27;,&#x27;节目单（EPG）&#x27;,&#x27;频道台标&#x27;,&#x27;外观&#x27;,&#x27;播放&#x27;,&#x27;遥控器&#x27;,&#x27;备份与恢复&#x27;,&#x27;诊断信息&#x27;];
+    const st={page:&#x27;player&#x27;,condition:&#x27;normal&#x27;,playing:0,selected:0,saved:0,col:0,control:0,group:0,setting:0,row:0,option:null,optionIndex:0,epg:&#x27;跟随播放列表&#x27;,logos:&#x27;播放列表优先&#x27;,update:&#x27;每天&#x27;,detail:false,info:false,font:19,largeFocus:true};
+    let timer=null;
+    const btn=(label,action,active=false,sub=&#x27;&#x27;)=&gt;`&lt;button type=&quot;button&quot; class=&quot;kt-item ${active?&#x27;kt-selected&#x27;:&#x27;&#x27;}&quot; data-action=&quot;${action}&quot;&gt;${label}${sub?`&lt;small&gt;${sub}&lt;/small&gt;`:&#x27;&#x27;}&lt;/button&gt;`;
+    function visible(){return channels.map((c,i)=&gt;i).filter(i=&gt;st.group===0||(st.group===1?i===0:channels[i].group===groups[st.group]));}
+    function program(i){return st.condition===&#x27;noepg&#x27;?&#x27;暂无节目单&#x27;:channels[i].show;}
+    function scene(mini=false){return `&lt;div class=&quot;kt-scene ${mini?&#x27;kt-mini&#x27;:&#x27;&#x27;}&quot;&gt;&lt;span class=&quot;kt-channel-mark&quot;&gt;${channels[st.playing].name}&lt;/span&gt;&lt;div class=&quot;kt-program&quot;&gt;${channels[st.playing].show}&lt;small&gt;演示画面&lt;/small&gt;&lt;/div&gt;&lt;/div&gt;`;}
+    function say(text){feedback.textContent=text;}
+    function choose(i,preview=false){if(st.condition===&#x27;error&#x27;||st.condition===&#x27;loading&#x27;)st.condition=&#x27;normal&#x27;;st.playing=i;st.selected=i;st.saved=i;st.info=!preview;st.page=preview?&#x27;guide&#x27;:&#x27;player&#x27;;render();say(preview?&#x27;正在预览；再次确认进入全屏&#x27;:&#x27;已切换频道（模拟）&#x27;);if(!preview){clearTimeout(timer);timer=setTimeout(()=&gt;{st.info=false;render();},3000);}}
+    function guide(){let ids=visible();return `&lt;div class=&quot;kt-guide&quot;&gt;&lt;div class=&quot;kt-guide-top&quot;&gt;${scene(true)}&lt;div&gt;&lt;div class=&quot;kt-title&quot;&gt;${program(st.selected)}&lt;/div&gt;&lt;div class=&quot;kt-sub&quot;&gt;${channels[st.selected].name}${st.condition===&#x27;noepg&#x27;?&#x27; · 仍可观看&#x27;:&#x27; · 19:00–19:30&#x27;}&lt;/div&gt;&lt;div class=&quot;kt-sub&quot;&gt;${st.playing===st.selected?&#x27;确认进入全屏&#x27;:&#x27;确认开始预览&#x27;}&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;&lt;div class=&quot;kt-grid&quot;&gt;&lt;div class=&quot;kt-time&quot;&gt;今天&lt;/div&gt;&lt;div class=&quot;kt-time&quot;&gt;${st.condition===&#x27;noepg&#x27;?&#x27;当前&#x27;:&#x27;19:00&#x27;}&lt;/div&gt;&lt;div class=&quot;kt-time&quot;&gt;${st.condition===&#x27;noepg&#x27;?&#x27;下一节目&#x27;:&#x27;19:30&#x27;}&lt;/div&gt;${ids.map(i=&gt;`&lt;div class=&quot;kt-rowname&quot;&gt;${st.playing===i?&#x27;▸ &#x27;:&#x27;&#x27;}${channels[i].name}&lt;/div&gt;${btn(program(i),`guide:${i}:0`,st.page===&#x27;guide&#x27;&amp;&amp;st.selected===i&amp;&amp;st.col===0)}${btn(st.condition===&#x27;noepg&#x27;?&#x27;暂无节目单&#x27;:channels[i].next,`guide:${i}:1`,st.page===&#x27;guide&#x27;&amp;&amp;st.selected===i&amp;&amp;st.col===1)}`).join(&#x27;&#x27;)}&lt;/div&gt;&lt;/div&gt;`;}
+    const options={epg:[&#x27;跟随播放列表&#x27;,&#x27;中文公共节目单（候选）&#x27;,&#x27;自定义 XMLTV&#x27;,&#x27;关闭节目单&#x27;],logos:[&#x27;播放列表优先&#x27;,&#x27;中文台标库补全（候选）&#x27;,&#x27;国际频道资料库（候选）&#x27;,&#x27;仅显示频道名称&#x27;],update:[&#x27;每天&#x27;,&#x27;每 12 小时&#x27;,&#x27;手动更新&#x27;]};
+    function settingRows(){return [
+      [[&#x27;启动后&#x27;,&#x27;恢复上次频道并全屏播放&#x27;],[&#x27;日常界面&#x27;,&#x27;仅必要频道与节目信息&#x27;]],
+      [[&#x27;示例播放列表&#x27;,&#x27;4 个虚构频道 · 仅原型&#x27;],[&#x27;添加播放列表&#x27;,&#x27;模拟导入演示样例&#x27;,&#x27;import&#x27;]],
+      [[&#x27;节目单来源&#x27;,st.epg,&#x27;option:epg&#x27;],[&#x27;频道匹配&#x27;,&#x27;优先频道标识；重名时由家人指定&#x27;],[&#x27;自动更新&#x27;,st.update,&#x27;option:update&#x27;],[&#x27;立即更新&#x27;,&#x27;尚未连接真实来源&#x27;,&#x27;refresh&#x27;],[&#x27;时间校正&#x27;,&#x27;自动识别时区；可按来源调整&#x27;],[&#x27;更新状态&#x27;,&#x27;未下载 · 原型选择不验证源可用性&#x27;]],
+      [[&#x27;台标来源&#x27;,st.logos,&#x27;option:logos&#x27;],[&#x27;匹配规则&#x27;,&#x27;优先已有台标；缺失时按频道资料补全&#x27;],[&#x27;手动指定台标&#x27;,&#x27;可为单个频道纠正&#x27;],[&#x27;本地缓存&#x27;,&#x27;加载失败保留旧台标；没有台标显示名称&#x27;]],
+      [[&#x27;字体大小&#x27;,&#x27;大号&#x27;],[&#x27;焦点样式&#x27;,&#x27;高对比填充&#x27;]],
+      [[&#x27;播放策略&#x27;,&#x27;自动 · 待实际播放测试后确定&#x27;],[&#x27;音轨与字幕&#x27;,&#x27;后续阶段&#x27;],[&#x27;画面比例&#x27;,&#x27;默认保持原比例&#x27;],[&#x27;回看、时移、录制、多画面&#x27;,&#x27;按依赖分期实现&#x27;]],
+      [[&#x27;全屏确认键&#x27;,&#x27;打开频道列表&#x27;],[&#x27;底部控制栏返回键&#x27;,&#x27;关闭控制栏，继续全屏播放&#x27;],[&#x27;自定义按键&#x27;,&#x27;后续阶段&#x27;]],
+      [[&#x27;备份配置&#x27;,&#x27;含频道匹配、节目单和台标设置&#x27;],[&#x27;恢复配置&#x27;,&#x27;后续阶段&#x27;]],
+      [[&#x27;当前版本&#x27;,&#x27;交互原型，无真实播放内核&#x27;],[&#x27;网络、解码、错误与更新详情&#x27;,&#x27;正式版本在这里展示&#x27;],[&#x27;设备兼容&#x27;,&#x27;两台设备均待实测&#x27;]]
+    ][st.setting];}
+    function settingBody(){if(st.option)return `&lt;div class=&quot;kt-title&quot;&gt;${st.option===&#x27;epg&#x27;?&#x27;节目单来源&#x27;:st.option===&#x27;logos&#x27;?&#x27;台标来源&#x27;:&#x27;自动更新&#x27;}&lt;/div&gt;&lt;div class=&quot;kt-sub&quot;&gt;选择仅用于原型演示&lt;/div&gt;${options[st.option].map((v,i)=&gt;btn(v,`pick:${i}`,i===st.optionIndex)).join(&#x27;&#x27;)}`;return `&lt;div class=&quot;kt-title&quot;&gt;${categories[st.setting]}&lt;/div&gt;${settingRows().map((r,j)=&gt;btn(r[0],`row:${j}`,st.detail&amp;&amp;j===st.row,r[1])).join(&#x27;&#x27;)}`;}
+    function render(){screen.style.setProperty(&#x27;--kt-size&#x27;,st.font+&#x27;px&#x27;);pageSelect.value=[&#x27;controls&#x27;,&#x27;menu&#x27;,&#x27;groups&#x27;,&#x27;import&#x27;,&#x27;program&#x27;].includes(st.page)?(st.page===&#x27;groups&#x27;||st.page===&#x27;program&#x27;?&#x27;guide&#x27;:st.page===&#x27;import&#x27;?&#x27;settings&#x27;:&#x27;player&#x27;):st.page;stateSelect.value=st.condition;let out=&#x27;&#x27;;
+      if(st.condition===&#x27;empty&#x27;&amp;&amp;st.page!==&#x27;settings&#x27;&amp;&amp;st.page!==&#x27;import&#x27;){out=`&lt;div class=&quot;kt-status&quot;&gt;&lt;div class=&quot;kt-title&quot;&gt;还没有频道&lt;/div&gt;&lt;div class=&quot;kt-sub&quot;&gt;添加播放列表后，就可以开始看电视。&lt;/div&gt;${btn(&#x27;添加播放列表&#x27;,&#x27;import&#x27;,true)}&lt;/div&gt;`;}
+      else if(st.page===&#x27;import&#x27;){out=`&lt;div class=&quot;kt-status&quot;&gt;&lt;div class=&quot;kt-title&quot;&gt;添加播放列表&lt;/div&gt;&lt;div class=&quot;kt-sub&quot;&gt;本次仅演示导入流程，不读取真实文件或地址。&lt;/div&gt;${btn(&#x27;导入示例频道&#x27;,&#x27;sample&#x27;,true)}${btn(&#x27;返回设置&#x27;,&#x27;settings&#x27;)}&lt;/div&gt;`;}
+      else if(st.condition===&#x27;loading&#x27;&amp;&amp;st.page===&#x27;player&#x27;){out=`&lt;div class=&quot;kt-status&quot;&gt;&lt;div class=&quot;kt-title&quot;&gt;正在打开 ${channels[st.playing].name}&lt;/div&gt;&lt;div class=&quot;kt-sub&quot;&gt;请稍候&lt;/div&gt;${btn(&#x27;选择其他频道&#x27;,&#x27;channels&#x27;,true)}&lt;/div&gt;`;}
+      else if(st.condition===&#x27;error&#x27;&amp;&amp;st.page===&#x27;player&#x27;){out=`&lt;div class=&quot;kt-status&quot;&gt;&lt;div class=&quot;kt-title&quot;&gt;暂时无法播放&lt;/div&gt;&lt;div class=&quot;kt-sub&quot;&gt;可以重试，或先看看其他频道。&lt;/div&gt;&lt;div class=&quot;kt-actions&quot;&gt;${btn(&#x27;重试&#x27;,&#x27;retry&#x27;,st.control===0)}${btn(&#x27;选择频道&#x27;,&#x27;channels&#x27;,st.control===1)}&lt;/div&gt;&lt;/div&gt;`;}
+      else if(st.page===&#x27;settings&#x27;){out=`&lt;div class=&quot;kt-settings&quot;&gt;&lt;div class=&quot;kt-setting-nav&quot;&gt;&lt;div class=&quot;kt-title&quot;&gt;设置&lt;/div&gt;${categories.map((c,i)=&gt;btn(c,`setting:${i}`,st.setting===i&amp;&amp;!st.detail)).join(&#x27;&#x27;)}&lt;/div&gt;&lt;div class=&quot;kt-setting-body&quot;&gt;${settingBody()}&lt;/div&gt;&lt;/div&gt;`;}
+      else if(st.page===&#x27;guide&#x27;||st.page===&#x27;groups&#x27;){out=st.page===&#x27;groups&#x27;?`&lt;div class=&quot;kt-with-groups&quot;&gt;&lt;div class=&quot;kt-groups&quot;&gt;&lt;div class=&quot;kt-title&quot;&gt;频道&lt;/div&gt;${groups.map((g,i)=&gt;btn(g,`group:${i}`,st.group===i)).join(&#x27;&#x27;)}&lt;/div&gt;${guide()}&lt;/div&gt;`:guide();}
+      else if(st.page===&#x27;program&#x27;){out=`&lt;div class=&quot;kt-status&quot;&gt;&lt;div class=&quot;kt-title&quot;&gt;${channels[st.selected].next}&lt;/div&gt;&lt;div class=&quot;kt-sub&quot;&gt;19:30 开始 · ${channels[st.selected].name}&lt;/div&gt;${btn(&#x27;观看当前直播&#x27;,&#x27;live&#x27;,true)}${btn(&#x27;返回节目表&#x27;,&#x27;guide&#x27;)}&lt;/div&gt;`;}
+      else{out=scene();if(st.page===&#x27;channels&#x27;){out=`&lt;div class=&quot;kt-with-list&quot;&gt;${out}&lt;/div&gt;&lt;div class=&quot;kt-side&quot;&gt;&lt;div class=&quot;kt-title&quot;&gt;${groups[st.group]}&lt;/div&gt;${visible().map(i=&gt;btn(`${String(i+1).padStart(2,&#x27;0&#x27;)}　${channels[i].name}`,`channel:${i}`,i===st.selected,program(i))).join(&#x27;&#x27;)}&lt;/div&gt;`;}if(st.page===&#x27;controls&#x27;){out+=`&lt;div class=&quot;kt-overlay&quot;&gt;&lt;div class=&quot;kt-title&quot;&gt;${program(st.playing)}&lt;/div&gt;&lt;div class=&quot;kt-sub&quot;&gt;${channels[st.playing].name}${st.condition===&#x27;noepg&#x27;?&#x27;&#x27;:&#x27; · 19:00–19:30&#x27;}&lt;/div&gt;&lt;div class=&quot;kt-actions&quot;&gt;${[&#x27;节目表&#x27;,&#x27;频道列表&#x27;,&#x27;最近观看&#x27;,&#x27;设置&#x27;].map((v,i)=&gt;btn(v,`control:${i}`,st.control===i)).join(&#x27;&#x27;)}&lt;/div&gt;&lt;/div&gt;`;}if(st.page===&#x27;menu&#x27;){out+=`&lt;div class=&quot;kt-side&quot;&gt;&lt;div class=&quot;kt-title&quot;&gt;看电视&lt;/div&gt;${[&#x27;电视&#x27;,&#x27;频道列表&#x27;,&#x27;设置&#x27;].map((v,i)=&gt;btn(v,`menu:${i}`,st.control===i)).join(&#x27;&#x27;)}&lt;/div&gt;`;}if(st.page===&#x27;player&#x27;&amp;&amp;st.info)out+=`&lt;div class=&quot;kt-overlay&quot;&gt;&lt;div class=&quot;kt-title&quot;&gt;${channels[st.playing].name}&lt;/div&gt;&lt;div&gt;${program(st.playing)}&lt;/div&gt;&lt;/div&gt;`;}
+      const restoreFocus=screen.contains(document.activeElement);screen.innerHTML=out;if(restoreFocus)(screen.querySelector(&#x27;.kt-selected&#x27;)||root.querySelector(&#x27;[data-key=&quot;Enter&quot;]&#x27;)).focus({preventScroll:true});
+    }
+    function go(page){clearTimeout(timer);st.info=false;st.detail=false;st.option=null;st.row=0;st.page=page;st.control=0;if(page===&#x27;channels&#x27;)st.selected=visible().includes(st.playing)?st.playing:visible()[0];render();}
+    function action(a){const [type,v,col]=a.split(&#x27;:&#x27;);if(type===&#x27;channel&#x27;)choose(Number(v));else if(type===&#x27;guide&#x27;){st.selected=Number(v);st.col=Number(col);if(st.col===1&amp;&amp;st.condition!==&#x27;noepg&#x27;){go(&#x27;program&#x27;);}else if(st.playing===st.selected)choose(st.selected);else choose(st.selected,true);}else if(type===&#x27;control&#x27;){st.control=Number(v);if(st.control===2){render();say(&#x27;最近观看为后续阶段，本版仅展示入口&#x27;);}else go([&#x27;guide&#x27;,&#x27;channels&#x27;,&#x27;&#x27;,&#x27;settings&#x27;][st.control]);}else if(type===&#x27;setting&#x27;){st.setting=Number(v);st.detail=true;st.row=0;st.option=null;render();}else if(type===&#x27;row&#x27;){st.row=Number(v);st.detail=true;action(settingRows()[st.row][2]||&#x27;detail&#x27;);}else if(type===&#x27;option&#x27;){st.option=v;st.optionIndex=Math.max(0,options[v].indexOf(st[v]));render();}else if(type===&#x27;pick&#x27;){const prop=st.option;st[prop]=options[prop][Number(v)];st.option=null;render();say(&#x27;已选择（仅模拟），尚未下载或验证真实资料&#x27;);}else if(type===&#x27;refresh&#x27;){say(&#x27;原型未连接真实来源；正式版会报告更新结果并保留上次可用资料&#x27;);}else if(type===&#x27;group&#x27;){st.group=Number(v);st.selected=visible()[0];go(&#x27;guide&#x27;);}else if(type===&#x27;menu&#x27;){go([&#x27;guide&#x27;,&#x27;channels&#x27;,&#x27;settings&#x27;][Number(v)]);}else if(type===&#x27;sample&#x27;){st.condition=&#x27;normal&#x27;;st.group=0;choose(0);say(&#x27;已模拟导入 4 个频道&#x27;);}else if(type===&#x27;retry&#x27;){st.condition=&#x27;loading&#x27;;render();say(&#x27;模拟重试中&#x27;);clearTimeout(timer);timer=setTimeout(()=&gt;{st.condition=&#x27;normal&#x27;;choose(st.playing);},1000);}else if(type===&#x27;live&#x27;){choose(st.selected);}else if(type===&#x27;detail&#x27;){say(&#x27;此处为设置说明；对应功能尚未实现&#x27;);}else go(type);}
+    function moveChannel(delta){const ids=visible(),at=Math.max(0,ids.indexOf(st.selected));st.selected=ids[(at+delta+ids.length)%ids.length];}
+    function key(k){if(st.page===&#x27;import&#x27;){if(k===&#x27;Enter&#x27;)action(&#x27;sample&#x27;);else if(k===&#x27;Escape&#x27;)go(&#x27;settings&#x27;);return;}if(st.condition===&#x27;empty&#x27;&amp;&amp;st.page!==&#x27;settings&#x27;){if(k===&#x27;Enter&#x27;)go(&#x27;import&#x27;);else if(k===&#x27;Escape&#x27;)go(&#x27;settings&#x27;);return;}if(st.page===&#x27;player&#x27;){if(st.condition===&#x27;error&#x27;){if(k===&#x27;ArrowLeft&#x27;||k===&#x27;ArrowRight&#x27;)st.control=1-st.control;else if(k===&#x27;Enter&#x27;){action(st.control===0?&#x27;retry&#x27;:&#x27;channels&#x27;);return;}else if(k===&#x27;Escape&#x27;){go(&#x27;guide&#x27;);return;}render();return;}if(st.condition===&#x27;loading&#x27;){if(k===&#x27;Enter&#x27;||k===&#x27;Escape&#x27;||k===&#x27;ArrowLeft&#x27;)go(&#x27;channels&#x27;);return;}if(k===&#x27;ArrowLeft&#x27;||k===&#x27;Enter&#x27;)go(&#x27;channels&#x27;);else if(k===&#x27;Escape&#x27;){if(st.info){st.info=false;render();}else go(&#x27;guide&#x27;);}else go(&#x27;controls&#x27;);return;}
+      if(st.page===&#x27;channels&#x27;){if(k===&#x27;ArrowUp&#x27;)moveChannel(-1);if(k===&#x27;ArrowDown&#x27;)moveChannel(1);if(k===&#x27;Enter&#x27;){choose(st.selected);return;}if(k===&#x27;Escape&#x27;){go(&#x27;player&#x27;);return;}if(k===&#x27;ArrowLeft&#x27;){go(&#x27;groups&#x27;);return;}}
+      else if(st.page===&#x27;guide&#x27;){if(k===&#x27;ArrowUp&#x27;)moveChannel(-1);if(k===&#x27;ArrowDown&#x27;)moveChannel(1);if(k===&#x27;ArrowRight&#x27;)st.col=1;if(k===&#x27;ArrowLeft&#x27;){if(st.col===1)st.col=0;else{go(&#x27;groups&#x27;);return;}}if(k===&#x27;Enter&#x27;){action(`guide:${st.selected}:${st.col}`);return;}if(k===&#x27;Escape&#x27;){go(&#x27;groups&#x27;);return;}}
+      else if(st.page===&#x27;groups&#x27;){if(k===&#x27;ArrowUp&#x27;)st.group=(st.group+groups.length-1)%groups.length;if(k===&#x27;ArrowDown&#x27;)st.group=(st.group+1)%groups.length;st.selected=visible()[0];if(k===&#x27;Enter&#x27;||k===&#x27;ArrowRight&#x27;){go(&#x27;guide&#x27;);return;}if(k===&#x27;Escape&#x27;||k===&#x27;ArrowLeft&#x27;){go(&#x27;menu&#x27;);return;}}
+      else if(st.page===&#x27;controls&#x27;||st.page===&#x27;menu&#x27;){const n=st.page===&#x27;controls&#x27;?4:3;if(k===&#x27;ArrowRight&#x27;||k===&#x27;ArrowDown&#x27;)st.control=(st.control+1)%n;if(k===&#x27;ArrowLeft&#x27;||k===&#x27;ArrowUp&#x27;)st.control=(st.control+n-1)%n;if(k===&#x27;Enter&#x27;){action(`${st.page===&#x27;controls&#x27;?&#x27;control&#x27;:&#x27;menu&#x27;}:${st.control}`);return;}if(k===&#x27;Escape&#x27;){go(st.page===&#x27;controls&#x27;?&#x27;player&#x27;:&#x27;groups&#x27;);return;}}
+      else if(st.page===&#x27;settings&#x27;){
+        if(st.option){const n=options[st.option].length;if(k===&#x27;Escape&#x27;||k===&#x27;ArrowLeft&#x27;)st.option=null;else if(k===&#x27;ArrowDown&#x27;)st.optionIndex=(st.optionIndex+1)%n;else if(k===&#x27;ArrowUp&#x27;)st.optionIndex=(st.optionIndex+n-1)%n;else if(k===&#x27;Enter&#x27;){action(`pick:${st.optionIndex}`);return;}}
+        else if(k===&#x27;Escape&#x27;||k===&#x27;ArrowLeft&#x27;){if(st.detail)st.detail=false;else{go(&#x27;menu&#x27;);return;}}
+        else if(k===&#x27;ArrowDown&#x27;||k===&#x27;ArrowUp&#x27;){const delta=k===&#x27;ArrowDown&#x27;?1:-1;if(st.detail){const n=settingRows().length;st.row=(st.row+delta+n)%n;}else{st.setting=(st.setting+delta+categories.length)%categories.length;st.row=0;}}
+        else if(k===&#x27;Enter&#x27;||k===&#x27;ArrowRight&#x27;){if(st.detail&amp;&amp;k===&#x27;Enter&#x27;){action(`row:${st.row}`);return;}st.detail=true;}
+      }
+      else if(st.page===&#x27;program&#x27;){if(k===&#x27;Enter&#x27;){choose(st.selected);return;}if(k===&#x27;Escape&#x27;){go(&#x27;guide&#x27;);return;}}render();
+    }
+    root.addEventListener(&#x27;click&#x27;,e=&gt;{const b=e.target.closest(&#x27;button&#x27;);if(!b)return;if(b.dataset.action)action(b.dataset.action);if(b.dataset.key)key(b.dataset.key);});
+    root.addEventListener(&#x27;keydown&#x27;,e=&gt;{if(e.target.closest(&#x27;.kt-lab&#x27;))return;if(e.key===&#x27;Enter&#x27;&amp;&amp;e.target.tagName===&#x27;BUTTON&#x27;)return;if(![&#x27;ArrowLeft&#x27;,&#x27;ArrowRight&#x27;,&#x27;ArrowUp&#x27;,&#x27;ArrowDown&#x27;,&#x27;Enter&#x27;,&#x27;Escape&#x27;].includes(e.key))return;const inScreen=screen.contains(e.target);e.preventDefault();key(e.key);if(inScreen)(screen.querySelector(&#x27;.kt-selected&#x27;)||root.querySelector(&#x27;[data-key=&quot;Enter&quot;]&#x27;)).focus({preventScroll:true});});
+    pageSelect.addEventListener(&#x27;change&#x27;,()=&gt;go(pageSelect.value));stateSelect.addEventListener(&#x27;change&#x27;,()=&gt;{clearTimeout(timer);st.condition=stateSelect.value;st.info=false;st.control=0;if([&#x27;empty&#x27;,&#x27;loading&#x27;,&#x27;error&#x27;].includes(st.condition))st.page=&#x27;player&#x27;;render();say(&#x27;已切换原型状态&#x27;);});
+    root.querySelector(&#x27;#kt-reopen&#x27;).addEventListener(&#x27;click&#x27;,()=&gt;{st.playing=st.saved;st.selected=st.saved;st.condition=st.condition===&#x27;empty&#x27;?&#x27;empty&#x27;:&#x27;normal&#x27;;st.group=0;go(&#x27;player&#x27;);say(&#x27;已模拟恢复上次频道；正式版本需验证持久化&#x27;);});
+    render();
+    if(globalThis.Tweak){const tweak=new Tweak({container:screen,onChange:render});tweak.addSlider(st,&#x27;font&#x27;,{label:&#x27;界面字号&#x27;,min:17,max:23,unit:&#x27;px&#x27;});}
+  })();
+  &lt;/script&gt;
+&lt;/div&gt;
+
+&lt;script src=&quot;https://unpkg.com/@floating-ui/core@1.7.3/dist/floating-ui.core.umd.min.js&quot;&gt;&lt;/script&gt;
+&lt;script src=&quot;https://unpkg.com/@floating-ui/dom@1.7.4/dist/floating-ui.dom.umd.min.js&quot;&gt;&lt;/script&gt;
+&lt;script&gt;
+(() =&gt; {
+  if (window.FloatingUIDOM == null) {
+    return;
+  }
+  const { autoUpdate, computePosition, flip, offset, shift, size } =
+    window.FloatingUIDOM;
+  const tooltipPlacements = new Set([&quot;top&quot;, &quot;right&quot;, &quot;bottom&quot;, &quot;left&quot;]);
+  const tooltipId = `codex-visualization-tooltip-${
+    window.crypto?.randomUUID?.() ?? Date.now().toString(36)
+  }`;
+  const tooltipGap = 5;
+  const hoverDelay = 700;
+  const skipDelay = 300;
+  let activeTrigger = null;
+  let pendingTrigger = null;
+  let tooltip = null;
+  let openTimeout = null;
+  let autoUpdateCleanup = null;
+  let positionRequest = 0;
+  let skipDelayUntil = 0;
+  let lastPointerWasTouch = false;
+  let pinnedByTouch = false;
+
+  const getTrigger = (target) =&gt;
+    target?.nodeType === Node.ELEMENT_NODE
+      ? target.closest(&quot;[data-tooltip]&quot;)
+      : null;
+  const containsTarget = (trigger, target) =&gt;
+    target?.nodeType != null &amp;&amp; trigger.contains(target);
+  const getContent = (trigger) =&gt;
+    trigger.getAttribute(&quot;data-tooltip&quot;)?.trim() ?? &quot;&quot;;
+  const getPlacement = (trigger) =&gt; {
+    const placement = trigger.getAttribute(&quot;data-tooltip-placement&quot;);
+    return tooltipPlacements.has(placement) ? placement : &quot;top&quot;;
+  };
+  const getTooltip = () =&gt; {
+    if (tooltip == null) {
+      tooltip = document.createElement(&quot;div&quot;);
+      tooltip.id = tooltipId;
+      tooltip.className = &quot;tooltip&quot;;
+      tooltip.setAttribute(&quot;role&quot;, &quot;tooltip&quot;);
+    }
+    return tooltip;
+  };
+  const setDescribedBy = (trigger, described) =&gt; {
+    const ids = new Set(
+      (trigger.getAttribute(&quot;aria-describedby&quot;) ?? &quot;&quot;)
+        .split(/\s+/)
+        .filter(Boolean),
+    );
+    if (described) {
+      ids.add(tooltipId);
+    } else {
+      ids.delete(tooltipId);
+    }
+    if (ids.size === 0) {
+      trigger.removeAttribute(&quot;aria-describedby&quot;);
+    } else {
+      trigger.setAttribute(&quot;aria-describedby&quot;, [...ids].join(&quot; &quot;));
+    }
+  };
+  const clearOpenTimeout = () =&gt; {
+    if (openTimeout != null) {
+      window.clearTimeout(openTimeout);
+      openTimeout = null;
+    }
+    pendingTrigger = null;
+  };
+  const closeTooltip = (activateSkipDelay = true) =&gt; {
+    clearOpenTimeout();
+    pinnedByTouch = false;
+    positionRequest += 1;
+    autoUpdateCleanup?.();
+    autoUpdateCleanup = null;
+    if (activeTrigger == null) {
+      return;
+    }
+    setDescribedBy(activeTrigger, false);
+    activeTrigger = null;
+    tooltip?.remove();
+    if (activateSkipDelay) {
+      skipDelayUntil = Date.now() + skipDelay;
+    }
+  };
+  const updatePosition = (trigger, floating) =&gt; {
+    const request = ++positionRequest;
+    void computePosition(trigger, floating, {
+      middleware: [
+        offset(tooltipGap),
+        flip({ padding: tooltipGap }),
+        shift({ padding: tooltipGap }),
+        size({
+          padding: tooltipGap,
+          apply({ availableHeight, availableWidth, elements }) {
+            elements.floating.style.setProperty(
+              &quot;--tooltip-available-width&quot;,
+              `${Math.max(0, availableWidth)}px`,
+            );
+            elements.floating.style.setProperty(
+              &quot;--tooltip-available-height&quot;,
+              `${Math.max(0, availableHeight)}px`,
+            );
+          },
+        }),
+      ],
+      placement: getPlacement(trigger),
+      strategy: &quot;fixed&quot;,
+    })
+      .then(({ x, y }) =&gt; {
+        if (activeTrigger !== trigger || request !== positionRequest) {
+          return;
+        }
+        const scale = window.devicePixelRatio || 1;
+        floating.style.transform = `translate(${Math.round(x * scale) / scale}px, ${Math.round(y * scale) / scale}px)`;
+        floating.style.visibility = &quot;visible&quot;;
+      })
+      .catch(() =&gt; {
+        if (activeTrigger === trigger &amp;&amp; request === positionRequest) {
+          closeTooltip(false);
+        }
+      });
+  };
+  const openTooltip = (trigger) =&gt; {
+    const content = getContent(trigger);
+    if (!trigger.isConnected || content.length === 0) {
+      return;
+    }
+    clearOpenTimeout();
+    if (activeTrigger === trigger) {
+      return;
+    }
+    closeTooltip();
+    const floating = getTooltip();
+    floating.textContent = content;
+    floating.style.visibility = &quot;hidden&quot;;
+    floating.style.transform = &quot;translate(0, 0)&quot;;
+    document.body.appendChild(floating);
+    activeTrigger = trigger;
+    setDescribedBy(trigger, true);
+    autoUpdateCleanup = autoUpdate(trigger, floating, () =&gt; {
+      updatePosition(trigger, floating);
+    });
+  };
+  const requestOpen = (trigger, immediate = false) =&gt; {
+    if (
+      getContent(trigger).length === 0 ||
+      activeTrigger === trigger ||
+      pendingTrigger === trigger
+    ) {
+      return;
+    }
+    clearOpenTimeout();
+    pendingTrigger = trigger;
+    const delay =
+      immediate || activeTrigger != null || Date.now() &lt; skipDelayUntil
+        ? 0
+        : hoverDelay;
+    if (delay === 0) {
+      openTooltip(trigger);
+      return;
+    }
+    openTimeout = window.setTimeout(() =&gt; {
+      openTimeout = null;
+      pendingTrigger = null;
+      openTooltip(trigger);
+    }, delay);
+  };
+  const handlePointerOpen = (event) =&gt; {
+    if (event.pointerType === &quot;touch&quot;) {
+      return;
+    }
+    const trigger = getTrigger(event.target);
+    if (trigger == null || containsTarget(trigger, event.relatedTarget)) {
+      return;
+    }
+    requestOpen(trigger);
+  };
+  const handlePointer = (event) =&gt; {
+    lastPointerWasTouch =
+      event.type === &quot;pointerdown&quot; &amp;&amp; event.pointerType === &quot;touch&quot;;
+  };
+  const handleTouchClick = (event) =&gt; {
+    const isTouch = event.pointerType === &quot;touch&quot; || lastPointerWasTouch;
+    lastPointerWasTouch = false;
+    if (!isTouch || event.detail === 0) {
+      return;
+    }
+    const trigger = getTrigger(event.target);
+    if (
+      trigger == null ||
+      !trigger.isConnected ||
+      getContent(trigger).length === 0 ||
+      (pinnedByTouch &amp;&amp; activeTrigger === trigger)
+    ) {
+      if (pinnedByTouch) {
+        closeTooltip();
+      }
+      return;
+    }
+    openTooltip(trigger);
+    pinnedByTouch = activeTrigger === trigger;
+    window.setTimeout(() =&gt; {
+      if (activeTrigger === trigger &amp;&amp; !trigger.isConnected) {
+        closeTooltip(false);
+      }
+    }, 0);
+  };
+  const handleLeave = (event) =&gt; {
+    if (pinnedByTouch) {
+      return;
+    }
+    const trigger = getTrigger(event.target);
+    if (trigger == null || containsTarget(trigger, event.relatedTarget)) {
+      return;
+    }
+    if (activeTrigger === trigger || pendingTrigger === trigger) {
+      closeTooltip();
+    }
+  };
+  const handleFocusIn = (event) =&gt; {
+    const trigger = getTrigger(event.target);
+    if (trigger?.matches(&quot;:focus-visible&quot;)) {
+      requestOpen(trigger, true);
+    }
+  };
+  const handleKeyDown = (event) =&gt; {
+    if (event.key === &quot;Escape&quot;) {
+      closeTooltip();
+    }
+  };
+  const handleContextMenu = (event) =&gt; {
+    lastPointerWasTouch = false;
+    const trigger = getTrigger(event.target);
+    if (activeTrigger === trigger || pendingTrigger === trigger) {
+      closeTooltip();
+    }
+  };
+  const destroy = () =&gt; {
+    closeTooltip(false);
+    lastPointerWasTouch = false;
+    document.removeEventListener(&quot;pointerover&quot;, handlePointerOpen);
+    document.removeEventListener(&quot;pointerdown&quot;, handlePointer);
+    document.removeEventListener(&quot;pointercancel&quot;, handlePointer);
+    document.removeEventListener(&quot;click&quot;, handleTouchClick);
+    document.removeEventListener(&quot;pointerout&quot;, handleLeave);
+    document.removeEventListener(&quot;focusin&quot;, handleFocusIn);
+    document.removeEventListener(&quot;focusout&quot;, handleLeave);
+    document.removeEventListener(&quot;keydown&quot;, handleKeyDown);
+    document.removeEventListener(&quot;contextmenu&quot;, handleContextMenu);
+    tooltip = null;
+  };
+
+  document.addEventListener(&quot;pointerover&quot;, handlePointerOpen);
+  document.addEventListener(&quot;pointerdown&quot;, handlePointer);
+  document.addEventListener(&quot;pointercancel&quot;, handlePointer);
+  document.addEventListener(&quot;click&quot;, handleTouchClick);
+  document.addEventListener(&quot;pointerout&quot;, handleLeave);
+  document.addEventListener(&quot;focusin&quot;, handleFocusIn);
+  document.addEventListener(&quot;focusout&quot;, handleLeave);
+  document.addEventListener(&quot;keydown&quot;, handleKeyDown);
+  document.addEventListener(&quot;contextmenu&quot;, handleContextMenu);
+  window.addEventListener(&quot;pagehide&quot;, destroy, { once: true });
+})();
+&lt;/script&gt;
+&lt;script id=&quot;codex-visualization-tabs&quot;&gt;
+(() =&gt; {
+  const selector = &#x27;.nav[role=&quot;tablist&quot;] [role=&quot;tab&quot;]&#x27;;
+  const disabled = &#x27;:disabled,[aria-disabled=&quot;true&quot;]&#x27;;
+  const selectTab = (selected) =&gt; {
+    const panelId = selected.getAttribute(&quot;aria-controls&quot;);
+    for (const tab of selected.closest(&#x27;[role=&quot;tablist&quot;]&#x27;).querySelectorAll(&#x27;[role=&quot;tab&quot;]&#x27;)) {
+      const active = tab === selected;
+      tab.classList.toggle(&quot;active&quot;, active);
+      tab.setAttribute(&quot;aria-selected&quot;, String(active));
+      const id = tab.getAttribute(&quot;aria-controls&quot;);
+      const panel = id &amp;&amp; document.getElementById(id);
+      if (panel != null) {
+        panel.hidden = id !== panelId;
+        if (!panel.hidden &amp;&amp; selected.id) {
+          panel.setAttribute(&quot;aria-labelledby&quot;, selected.id);
+        }
+      }
+    }
+  };
+  const interact = (event) =&gt; {
+    const tab = event.target?.closest?.(selector);
+    if (event.defaultPrevented || tab == null || tab.matches(disabled)) {
+      return;
+    }
+    if (event.type === &quot;click&quot;) {
+      selectTab(tab);
+      return;
+    }
+    const tabs = Array.from(
+      tab.closest(&#x27;[role=&quot;tablist&quot;]&#x27;).querySelectorAll(&#x27;[role=&quot;tab&quot;]&#x27;),
+    ).filter((candidate) =&gt; !candidate.matches(disabled));
+    const current = tabs.indexOf(tab);
+    let next;
+    if (event.key === &quot;ArrowRight&quot; || event.key === &quot;ArrowDown&quot;) {
+      next = (current + 1) % tabs.length;
+    } else if (event.key === &quot;ArrowLeft&quot; || event.key === &quot;ArrowUp&quot;) {
+      next = (current + tabs.length - 1) % tabs.length;
+    } else if (event.key === &quot;Home&quot;) {
+      next = 0;
+    } else if (event.key === &quot;End&quot;) {
+      next = tabs.length - 1;
+    } else {
+      return;
+    }
+    event.preventDefault();
+    tabs[next].focus();
+    selectTab(tabs[next]);
+  };
+
+  for (const list of document.querySelectorAll(&#x27;.nav[role=&quot;tablist&quot;]&#x27;)) {
+    const selected =
+      list.querySelector(&#x27;[role=&quot;tab&quot;][aria-selected=&quot;true&quot;]&#x27;) ??
+      list.querySelector(&#x27;[role=&quot;tab&quot;].active&#x27;) ??
+      list.querySelector(&#x27;[role=&quot;tab&quot;]&#x27;);
+    if (selected != null) {
+      selectTab(selected);
+    }
+  }
+  document.addEventListener(&quot;click&quot;, interact);
+  document.addEventListener(&quot;keydown&quot;, interact);
+  window.addEventListener(&quot;pagehide&quot;, () =&gt; {
+    document.removeEventListener(&quot;click&quot;, interact);
+    document.removeEventListener(&quot;keydown&quot;, interact);
+  }, { once: true });
+})();
+&lt;/script&gt;
+&lt;script id=&quot;codex-visualization-lucide&quot; async src=&quot;https://unpkg.com/lucide@1.17.0/dist/umd/lucide.js&quot;&gt;&lt;/script&gt;
+&lt;script&gt;
+(() =&gt; {
+  const initialize = () =&gt; {
+    globalThis.lucide?.createIcons({ attrs: { width: 16, height: 16 } });
+  };
+  if (globalThis.lucide != null) {
+    initialize();
+    return;
+  }
+  document
+    .getElementById(&quot;codex-visualization-lucide&quot;)
+    ?.addEventListener(&quot;load&quot;, initialize, { once: true });
+})();
+&lt;/script&gt;
+
+&lt;/body&gt;
+&lt;/html&gt;
+"></iframe>
+</body>
+</html>

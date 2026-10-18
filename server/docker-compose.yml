@@ -1,0 +1,25 @@
+# 通用本地部署：先运行 tools/init_config.py；不复用家庭现有 config/ 或 data/。
+# 默认只绑定回环地址。需要局域网访问时显式指定 IPTV_BIND_ADDRESS，勿直接映射公网。
+services:
+  iptv-nas:
+    build: .
+    image: kantv-hub:local
+    restart: unless-stopped
+    ports:
+      - "${IPTV_BIND_ADDRESS:-127.0.0.1}:${IPTV_PORT:-8420}:8420"
+    volumes:
+      - ${IPTV_DATA_DIR:-./runtime/data}:/app/data
+      - ${IPTV_CONFIG_DIR:-./runtime/config}:/app/config
+    environment:
+      - TZ=${TZ:-UTC}
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8420/healthz', timeout=5)"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "3"

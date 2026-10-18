@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "status": "experiment_plan_not_executed",
+  "reviewedAt": "2026-09-08",
+  "candidate": {
+    "family": "androidx.media3",
+    "player": "ExoPlayer",
+    "version": "1.11.0",
+    "sourceTag": "1.11.0",
+    "minSdkFromSource": 23,
+    "deviceCompatibility": "pending",
+    "legacyStandaloneExoPlayer": "excluded_from_new_project"
+  },
+  "networkPlaybackExperiments": [
+    {
+      "id": "upstream_baseline",
+      "bufferForPlaybackMs": 1000,
+      "bufferForPlaybackAfterRebufferMs": 2000,
+      "minBufferMs": 50000,
+      "maxBufferMs": 50000,
+      "targetBufferBytes": "upstream_auto",
+      "liveOffset": "source_and_upstream_default"
+    },
+    {
+      "id": "faster_start_trial",
+      "inherits": "upstream_baseline",
+      "bufferForPlaybackMs": 500,
+      "purpose": "only_change_first_playback_threshold_measure_first_frame_and_rebuffering"
+    },
+    {
+      "id": "safer_resume_trial",
+      "inherits": "upstream_baseline",
+      "bufferForPlaybackAfterRebufferMs": 4000,
+      "purpose": "only_change_resume_threshold_measure_resume_wait_and_repeated_stalls"
+    }
+  ],
+  "applicationRecoveryTrial": {
+    "status": "proposed_pilot_values_not_user_confirmed_requirements",
+    "maxAutomaticReopensPerEpisode": 2,
+    "maxActiveRecoveryTimeMs": 30000,
+    "stablePlaybackBeforeBudgetResetMs": 60000,
+    "offlineTimeCountsTowardActiveBudget": false,
+    "cancelOnNewSelectionOrExit": true,
+    "readyAloneResetsBudget": false,
+    "keepRollingFailureStatistics": true,
+    "credentialRefreshRequiresKnownSourceProtocol": true,
+    "behindLiveWindowRecoveryOnlyInLiveMode": true
+  },
+  "constraints": {
+    "preloadAdjacentLiveChannels": false,
+    "globalNonIdrKeyframeOverride": false,
+    "globalSoftwareVideoDecode": false,
+    "nasChanges": false,
+    "logRealUrlsOrCredentials": false,
+    "metadataFailureBlocksPlayback": false,
+    "oneChangedFactorPerExperiment": true
+  },
+  "measurementState": {
+    "apkBuilt": false,
+    "emulatorPlaybackTested": false,
+    "tclPlaybackTested": false,
+    "auroraBoxPlaybackTested": false,
+    "results": []
+  }
+}

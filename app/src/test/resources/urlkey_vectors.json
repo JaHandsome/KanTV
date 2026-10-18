@@ -1,0 +1,254 @@
+[
+  {
+    "url": "http://a/b.m3u8",
+    "url_key": "ab846732d8304f3b04a2e63c902a0d5e97de7549"
+  },
+  {
+    "url": "https://example.com/live/ch/index.mpd",
+    "url_key": "e79a1e88399d527a0894f4d8a3dd3c172415825f"
+  },
+  {
+    "url": "http://a/b.m3u8?",
+    "url_key": "b993d58bb685de81b52b49db30d5a0f37efe4278"
+  },
+  {
+    "url": "http://a/b.m3u8?foo=1&bar=2",
+    "url_key": "8e5189ba8880d93ae60b5aea9d6657ea349d3830"
+  },
+  {
+    "url": "http://edgeware.tvb.com/index.mpd?sig=aaaa1111&ext_start_limit=&int_start_limit=&ts=1700000000&c=",
+    "url_key": "b4b13c8ef30e55d0ddf6a321725911ce8e1e7345"
+  },
+  {
+    "url": "http://edgeware.tvb.com/index.mpd?sig=bbbb2222&ext_start_limit=&int_start_limit=&ts=1700086400&c=",
+    "url_key": "b4b13c8ef30e55d0ddf6a321725911ce8e1e7345"
+  },
+  {
+    "url": "http://h/p.m3u8?token=AAA&ch=1",
+    "url_key": "52d6adde786a2f6c4af4526983332867d0536de4"
+  },
+  {
+    "url": "http://h/p.m3u8?token=BBB&ch=1",
+    "url_key": "52d6adde786a2f6c4af4526983332867d0536de4"
+  },
+  {
+    "url": "http://h/p.m3u8?expires=1700000000&ch=1",
+    "url_key": "52d6adde786a2f6c4af4526983332867d0536de4"
+  },
+  {
+    "url": "http://h/p.m3u8?expires=1700086400&ch=1",
+    "url_key": "52d6adde786a2f6c4af4526983332867d0536de4"
+  },
+  {
+    "url": "http://h/p.m3u8?msisdn=13800000000&SecurityKey=AA&ch=1",
+    "url_key": "52d6adde786a2f6c4af4526983332867d0536de4"
+  },
+  {
+    "url": "http://h/p.m3u8?msisdn=13900000000&SecurityKey=BB&ch=1",
+    "url_key": "52d6adde786a2f6c4af4526983332867d0536de4"
+  },
+  {
+    "url": "http://h/p?sign=xx&signature=yy&ch=1",
+    "url_key": "2e9843508e451543b56238640af4a11ab8a18abf"
+  },
+  {
+    "url": "http://h/p?sign=zz&signature=ww&ch=1",
+    "url_key": "2e9843508e451543b56238640af4a11ab8a18abf"
+  },
+  {
+    "url": "http://120.196.235.42:9901/tsfile/live/1006_1.m3u8?key=fixture-auth-eec577e289ee",
+    "url_key": "f47346aad6a907c07d076edb4a2f159474e0daa5"
+  },
+  {
+    "url": "http://120.196.235.42:9901/tsfile/live/1006_1.m3u8?key=other",
+    "url_key": "90bfe82b5e8907185123f5f55ceaf379c0143001"
+  },
+  {
+    "url": "http://h/p?authid=123&ch=1",
+    "url_key": "99ffbf4bc231434b66146e9fc417b97818bc9b42"
+  },
+  {
+    "url": "http://h/p?authid=456&ch=1",
+    "url_key": "08d5919cc1fee0302e9407461685d0cf7a796743"
+  },
+  {
+    "url": "http://112.30.73.119:229/tsfile/live/0003_2.m3u8?key=fixture-auth-eec577e289ee&playlive=0&authid=0",
+    "url_key": "e4f2abf71f0baf3f6663fffd1790f37c647b861b"
+  },
+  {
+    "url": "http://h/p?a=1&b=2",
+    "url_key": "1ca032bb79be07ced8ffb3b40ba17b387d1fa32b"
+  },
+  {
+    "url": "http://h/p?b=2&a=1",
+    "url_key": "711abf860fc22b8bc07ca8a5d9939a92c28f3c42"
+  },
+  {
+    "url": "http://h/p?sign=x&a=1&b=2",
+    "url_key": "1ca032bb79be07ced8ffb3b40ba17b387d1fa32b"
+  },
+  {
+    "url": "http://h/p?b=2&sign=x&a=1",
+    "url_key": "711abf860fc22b8bc07ca8a5d9939a92c28f3c42"
+  },
+  {
+    "url": "http://h/p?foo=1#frag",
+    "url_key": "3384ab9063df47a637f094e08c7f2214e24667be"
+  },
+  {
+    "url": "http://h/p#frag",
+    "url_key": "0f13534f6b0626e4c46b6067e3c1b2ab2e4cbb95"
+  },
+  {
+    "url": "http://h/p?token=zzz#frag",
+    "url_key": "0f13534f6b0626e4c46b6067e3c1b2ab2e4cbb95"
+  },
+  {
+    "url": "HTTP://H/P?foo=1",
+    "url_key": "179575c5a011f4859d81623c651d35b571b32e52"
+  },
+  {
+    "url": "HTTP://H/p?foo=1",
+    "url_key": "3384ab9063df47a637f094e08c7f2214e24667be"
+  },
+  {
+    "url": "http://h/p?foo=1",
+    "url_key": "3384ab9063df47a637f094e08c7f2214e24667be"
+  },
+  {
+    "url": "Https://H/p?FOO=1",
+    "url_key": "f7b4ea118a5707f89927047aa9448691461d1ffc"
+  },
+  {
+    "url": "http://h/P",
+    "url_key": "75f51fa0189baad0e348c53e8f3d252e60ba299c"
+  },
+  {
+    "url": "rtmp://h/p?token=x",
+    "url_key": "44b786a25ee486e3e15fa1783b60e4fb0f04b4d3"
+  },
+  {
+    "url": "udp://h/p?sign=y",
+    "url_key": "8cbac4b7142308b9d5a1561edeb43e102909a7b3"
+  },
+  {
+    "url": "  http://a/b.m3u8  ",
+    "url_key": "ab846732d8304f3b04a2e63c902a0d5e97de7549"
+  },
+  {
+    "url": "foo",
+    "url_key": "0beec7b5ea3f0fdbc95d0dd47f3c5bc275da8a33"
+  },
+  {
+    "url": "://x",
+    "url_key": "013106aa44a3167ce46b5a458d0b797394e00419"
+  },
+  {
+    "url": "http://",
+    "url_key": "43a9519ed4b5e9c75eb7d683e3d1e09708f9b34a"
+  },
+  {
+    "url": "HTTP://User:PaSS@Host:8420/PaTh?q=1#f",
+    "url_key": "a9489f3f2adeda326cad34d7d5f1ca92561e7e49"
+  },
+  {
+    "url": "http://h/p?a=1&&b=2",
+    "url_key": "54e5313e73b2b5c68cfc7feba98bfe24c7188f98"
+  },
+  {
+    "url": "http://h:8420/p?token=#frag",
+    "url_key": "7263d3937ee5026c00651f4e39a93c3eb8d7c5b3"
+  },
+  {
+    "url": "http://h/p?sign=x&",
+    "url_key": "0f13534f6b0626e4c46b6067e3c1b2ab2e4cbb95"
+  },
+  {
+    "url": "http://h/p?sig=x",
+    "url_key": "7ef404e1342776b2f80337a2b3816605342a4397"
+  },
+  {
+    "url": "http://h/p?key=K&sign=s&authid=A&token=t",
+    "url_key": "f9dab87a12a9351807e53a39a361dbfbf013c28c"
+  },
+  {
+    "url": "http://edgeware.tvb.com/x.mpd?ts=1&sig=2",
+    "url_key": "4241c2246320b2ebcd74935a4b54942d22e37bdc"
+  },
+  {
+    "url": "http://edgeware.tvb.com.evil.net/x.mpd?ts=1&sig=2",
+    "url_key": "3ff146c500c4dc6b0b6dca5d5870de81e6bca847"
+  },
+  {
+    "url": "http://u:p@edgeware.tvb.com/x.mpd?sig=A&ts=1",
+    "url_key": "9a3b31a3f6882123228395e0e8bb65f30559972e"
+  },
+  {
+    "url": "HTTPS://edgeware.tvb.com/x.mpd?sig=A&ts=1",
+    "url_key": "7523378c50fa382a73abb0cd56c1481fb6ae4494"
+  },
+  {
+    "url": "http://fixture-5.example.invalid/__cl/slocalr21/__c/ott_J_hevc/__op/cenc_m/__f/index.mpd?sig=fixture-auth-d7573f08b204&ext_start_limit=1789181295&int_start_limit=1789181295&ts=1789181295&c=850464580",
+    "url_key": "8151740377693980d23c4cd017191ba46c91f39c"
+  },
+  {
+    "url": "http://fixture-5.example.invalid/__cl/slocalr43/__c/ott_P_hevc/__op/cenc_m/__f/index.mpd?sig=fixture-auth-5cb05f7d02e3&ext_start_limit=1789181296&int_start_limit=1789181296&ts=1789181296&c=850464580",
+    "url_key": "91d755021a26554ec6625b2022e5930497c5b895"
+  },
+  {
+    "url": "http://fixture-5.example.invalid/__cl/slocalr87/__c/ott_B_hevc/__op/cenc_m/__f/index.mpd?sig=fixture-auth-2e5e31eb6edc&ext_start_limit=1789181296&int_start_limit=1789181296&ts=1789181296&c=850464580",
+    "url_key": "39c5c2dd1ef24c06a42ca73acc175f91217f3121"
+  },
+  {
+    "url": "http://fixture-5.example.invalid/__cl/slocalr43/__c/ott_C_hevc/__op/cenc_m/__f/index.mpd?sig=fixture-auth-99bc00de9d88&ext_start_limit=1789181296&int_start_limit=1789181296&ts=1789181296&c=850464580",
+    "url_key": "cfdc8cff19e43c666eb5d62ba182d6978f3df043"
+  },
+  {
+    "url": "https://fixture-6.example.invalid/live/eds/MiaoMi/sa_dash_vmx/MiaoMi.mpd",
+    "url_key": "596965c17bda8a74e6e0d6051ec4d473692df5d4"
+  },
+  {
+    "url": "https://fixture-6.example.invalid/live/eds/CelestialMovie/sa_dash_vmx/CelestialMovie.mpd",
+    "url_key": "5ce6df4f26d52b504b89caf891a41bbfaa29b63e"
+  },
+  {
+    "url": "https://fixture-6.example.invalid/live/eds/XingKongTV/sa_dash_vmx/XingKongTV.mpd",
+    "url_key": "95b4f5cc60a01e0d8425b7bc75ef0e5024473550"
+  },
+  {
+    "url": "http://198.51.100.7/qctv.fengshows.cn/live/0701pcc72.flv",
+    "url_key": "da4a50f75f7cfd40c2e001343c8d7d8430709f2e"
+  },
+  {
+    "url": "http://198.51.100.7/qctv.fengshows.cn/live/0701pin72.flv",
+    "url_key": "6cd2ceb2d40ebb9a92867607dd76760a7a622b77"
+  },
+  {
+    "url": "http://198.51.100.7/qctv.fengshows.cn/live/0701phk72.flv",
+    "url_key": "e0580f60f822df226b3f631e0b19dfa3a9d67c50"
+  },
+  {
+    "url": "http://198.51.100.8:82/gslb/zbdq5.m3u8?id=cctv3hd",
+    "url_key": "87d33dd4aad8825c73a11a03564301f7e527f9ca"
+  },
+  {
+    "url": "http://198.51.100.8:82/gslb/zbdq5.m3u8?id=cctv6hd",
+    "url_key": "65335ded17ce7bf4e80e042285f0212a635ab911"
+  },
+  {
+    "url": "http://198.51.100.8:82/gslb/zbdq5.m3u8?id=cctv7hd",
+    "url_key": "cb6f57525850f5730db610d9993c6201cc596db2"
+  },
+  {
+    "url": "http://198.51.100.9:82/live/cctv1hd.m3u8",
+    "url_key": "cbfdeb398e180070c65077812fc185ef7c10cbea"
+  },
+  {
+    "url": "http://198.51.100.10/live/cctv2hd.m3u8",
+    "url_key": "f211e8fe2a8925f94285ca746dff492766bc5924"
+  },
+  {
+    "url": "http://198.51.100.11/live/cctv2hd.m3u8",
+    "url_key": "9bbdfd90518838d87218c62240f24267925737c0"
+  }
+]

@@ -1,0 +1,30 @@
+{
+  "manifest_version": 2,
+  "name": "KanTV schema17 loopback experiment",
+  "version": "1.21",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "kantv-av-production-probe@kantv.local"
+    }
+  },
+  "permissions": [
+    "tabs",
+    "nativeMessaging",
+    "nativeMessagingFromContent",
+    "geckoViewAddons"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "http://127.0.0.1/production-fixture.html*"
+      ],
+      "js": [
+        "startup-resource.js",
+        "proxy.js",
+        "bridge.js",
+        "phase.js"
+      ],
+      "run_at": "document_start"
+    }
+  ]
+}

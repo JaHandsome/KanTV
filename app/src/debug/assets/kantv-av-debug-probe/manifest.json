@@ -1,0 +1,12 @@
+{
+  "manifest_version": 2,
+  "name": "KanTV loopback AV debug experiment",
+  "version": "1.0",
+  "browser_specific_settings": {"gecko": {"id": "kantv-av-debug-probe@kantv.local"}},
+  "permissions": ["tabs", "nativeMessaging", "nativeMessagingFromContent", "geckoViewAddons"],
+  "content_scripts": [{
+    "matches": ["http://127.0.0.1/fixture.html*"],
+    "js": ["probe.js"],
+    "run_at": "document_idle"
+  }]
+}

@@ -1,0 +1,44 @@
+{
+  "lists": [
+    {
+      "id": "tvb-xiaotan",
+      "name": "TVB 官方 MPD 清单 (第三方重签名)",
+      "url": "https://xiaotan.860775.xyz/mytvsuper.m3u",
+      "enabled": false,
+      "format": "auto",
+      "user_agent": null,
+      "refresh_minutes": 360,
+      "note": "实测 2026-09-10：34 台；签名 ts = 清单生成时刻 + 86400s；enabled 默认 false，须与 probe_dash 同批开启（HK_MPD_ROUTE_DESIGN §3.2/§8）"
+    },
+    {
+      "id": "tvb-iptvjs",
+      "name": "备选清单（当前经已死网关，仅登记不启用）",
+      "url": "https://cdn.jsdelivr.net/gh/iptvjs/m3u@main/MytvSuper-Ts.m3u",
+      "enabled": false,
+      "format": "auto",
+      "user_agent": null,
+      "refresh_minutes": 360,
+      "note": "实测 2026-09-11：清单本身可达（80 台），但其 80/80 条频道 URL 全部指向同一网关 mytvsuper.858.qzz.io，该网关返回 HTTP 400 已死 → 整条清单当前不可用。保留登记以便网关恢复后重验。注意：judy / iptvjs / cnb.cool 三份 MytvSuper-Ts.m3u 是同一死网关的三个副本，不构成独立备选。原 url 误填 iptv-js.vercel.app（未经验证），已更正为真实 jsDelivr 地址。"
+    },
+    {
+      "id": "gitee-lwr851",
+      "name": "Gitee lwr851/live 动态更新库（非 GitHub 渠道）",
+      "url": "https://gitee.com/lwr851/live/raw/master/iptv.m3u",
+      "enabled": true,
+      "format": "auto",
+      "user_agent": null,
+      "refresh_minutes": 360,
+      "note": "2026-09-28 审计新增，打破 GitHub 单一渠道依赖。NAS 实测：HTTP 200 / 123KB / 550 台 / 1.2s 直连（国内 Gitee 不过 jsDelivr）。含央视/卫视/地方台，x-tvg-url 带多 EPG。"
+    },
+    {
+      "id": "hk-iptv-auto",
+      "name": "sammy0101/hk-iptv-auto 香港专项（每日 ffprobe 真机验证）",
+      "url": "https://cdn.jsdelivr.net/gh/sammy0101/hk-iptv-auto@main/hk_live.m3u",
+      "enabled": true,
+      "format": "auto",
+      "user_agent": null,
+      "refresh_minutes": 360,
+      "note": "2026-09-28 审计新增。NAS 实测：HTTP 200 / 32 台（TVB/ViuTV/HOY/RTHK/Now）。GitHub Actions 每日更新 + ffprobe 解码级检测 + 官方源 Geo-block 保护，质量高于普通聚合。注意 jsDelivr 缓存可能滞后上游 1 天。"
+    }
+  ]
+}
