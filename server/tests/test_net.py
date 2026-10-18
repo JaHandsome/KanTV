@@ -114,6 +114,18 @@ class _Handler(BaseHTTPRequestHandler):
         pass
 
     def do_GET(self):
+        if self.path.startswith('/policy_redirect/'):
+            targets = {
+                'same': '/fast',
+                'private_a': 'http://10.0.0.1:%d/fast' % self.server.server_port,
+                'private_b': 'http://10.0.0.2:%d/fast' % self.server.server_port,
+                'public': 'http://public.example:%d/fast' % self.server.server_port,
+            }
+            self.send_response(302)
+            self.send_header('Location', targets[self.path.rsplit('/', 1)[-1]])
+            self.send_header('Content-Length', '0')
+            self.end_headers()
+            return
         if self.path.startswith('/drip302'):
             self._drip302()
             return
@@ -752,6 +764,214 @@ class TestSSRFIntegration(unittest.TestCase):
             if isinstance(handler, urllib.request.ProxyHandler)
         ]
         self.assertEqual(registered, [])
+
+
+class TestPrivateSourcePolicy(unittest.TestCase):
+    @staticmethod
+    def _net(origins):
+        cfg = make_config()
+        cfg.settings['network']['private_source_origins'] = origins
+        return NetClient(cfg)
+
+    def test_private_literal_uses_exact_sockaddr_without_dns_or_resolver(self):
+        cases = [
+            ('http://10.0.0.1:8080', 'http', '10.0.0.1', 8080,
+             socket.AF_INET, ('10.0.0.1', 8080)),
+            ('https://[fd00::abcd]:8443', 'https', 'fd00::abcd', 8443,
+             socket.AF_INET6, ('fd00::abcd', 8443, 0, 0)),
+        ]
+        for origin, scheme, host, port, family, sockaddr in cases:
+            with self.subTest(origin=origin):
+                net = self._net([origin])
+                net._resolver = mock.Mock(side_effect=AssertionError('resolver called'))
+                with mock.patch.object(netmod.socket, 'getaddrinfo') as dns:
+                    addrs = net._resolve_target(scheme, host, port)
+                    sock = mock.Mock()
+                    with mock.patch.object(netmod.socket, 'socket', return_value=sock):
+                        netmod._connect_pinned(addrs, 1.0, None)
+                self.assertEqual(addrs[0][:4],
+                                 (family, socket.SOCK_STREAM, socket.IPPROTO_TCP, ''))
+                sock.connect.assert_called_once_with(sockaddr)
+                dns.assert_not_called()
+                net._resolver.assert_not_called()
+
+    def test_allowlist_matches_effective_port_and_canonical_ipv6(self):
+        net = self._net(['https://[FD00:0:0:0:0:0:0:1]:443', 'http://10.0.0.1:80'])
+        with mock.patch.object(netmod.socket, 'getaddrinfo') as dns:
+            self.assertEqual(net._resolve_target('https', 'fd00::1', None)[0][4],
+                             ('fd00::1', 443, 0, 0))
+            self.assertEqual(net._resolve_target('http', '10.0.0.1', None)[0][4],
+                             ('10.0.0.1', 80))
+        dns.assert_not_called()
+
+    def test_non_matching_ip_scheme_and_port_still_reject(self):
+        net = self._net(['http://10.0.0.1:8080'])
+        for url in ('http://10.0.0.2:8080/x', 'http://10.0.0.1:8081/x',
+                    'https://10.0.0.1:8080/x', 'http://10.0.0.1/x'):
+            with self.subTest(url=url):
+                scheme, host, port = netmod._validate_url(url)
+                infos = [(socket.AF_INET, socket.SOCK_STREAM, 6, '',
+                          (host, port or netmod._DEFAULT_PORTS[scheme]))]
+                with mock.patch.object(netmod.socket, 'getaddrinfo', return_value=infos):
+                    with mock.patch.object(netmod, '_connect_pinned') as connect:
+                        with self.assertRaises(netmod.NetPolicyError):
+                            net.fetch_ex(url, timeout=0.5)
+                connect.assert_not_called()
+
+    def test_public_hostname_cannot_borrow_authorized_private_ip(self):
+        net = self._net(['http://10.0.0.1:8080'])
+        private = (socket.AF_INET, socket.SOCK_STREAM, 6, '', ('10.0.0.1', 8080))
+        public = (socket.AF_INET, socket.SOCK_STREAM, 6, '', ('93.184.216.34', 8080))
+        for infos in ([private], [public, private], [private, public]):
+            with mock.patch.object(netmod.socket, 'getaddrinfo', return_value=infos):
+                with mock.patch.object(netmod, '_connect_pinned') as connect:
+                    with self.assertRaises(netmod.NetPolicyError):
+                        net.fetch_ex('http://public.example:8080/x', timeout=0.5)
+            connect.assert_not_called()
+
+    def test_authorization_is_immutable_until_new_client(self):
+        net = self._net(['http://10.0.0.1:8080'])
+        original = net._private_source_origins
+        self.assertIsInstance(original, frozenset)
+        net.cfg.settings['network']['private_source_origins'].append('http://10.0.0.2:8080')
+        self.assertIsNone(net._private_origin('http', '10.0.0.2', 8080))
+        net.cfg.settings['network']['private_source_origins'] = []
+        self.assertEqual(net._private_origin('http', '10.0.0.1', 8080),
+                         ('http', '10.0.0.1', 8080))
+        self.assertIsNone(NetClient(net.cfg)._private_origin('http', '10.0.0.1', 8080))
+
+    def test_invalid_origin_syntax_rejected_with_only_field_and_index(self):
+        invalid = [
+            None, 1, {}, [], '', '10.0.0.1:8080', 'ftp://10.0.0.1:8080',
+            'http://source.example:8080', 'http://10.0.0.0/8:8080',
+            'http://*:8080', 'http://10.0.0.1', 'http://10.0.0.1:',
+            'http://user@10.0.0.1:8080', 'http://10.0.0.1:8080/',
+            'http://10.0.0.1:8080/path', 'http://10.0.0.1:8080?',
+            'http://10.0.0.1:8080#', 'http://10.0.0.1:8080?secret=value',
+            'http://10.0.0.1:0', 'http://10.0.0.1:65536',
+            'http://10.0.0.1:+80', 'http://010.0.0.1:80',
+            'http://[fd00::1%25eth0]:80', ' http://10.0.0.1:80',
+            'http://10.0.0.1:80 ', 'http://10.0.0.1:80\n',
+            'http://10.0.\t0.1:80', '\x00http://10.0.0.1:80',
+        ]
+        for value in invalid:
+            with self.subTest(index=invalid.index(value)):
+                with self.assertRaises(ValueError) as caught:
+                    self._net(['http://10.0.0.1:8080', value])
+                self.assertEqual(str(caught.exception),
+                                 'network.private_source_origins[1]: invalid private source origin')
+
+    def test_only_rfc1918_and_ula_ranges_can_be_authorized(self):
+        forbidden = (
+            '0.0.0.0', '127.0.0.1', '169.254.169.254', '100.64.0.1',
+            '192.0.0.9', '192.0.2.1', '198.51.100.1', '203.0.113.1',
+            '198.18.0.1', '224.0.0.1', '240.0.0.1', '255.255.255.255',
+            '8.8.8.8', '172.15.255.255', '172.32.0.0', '192.169.0.1',
+            '::', '::1', 'fe80::1', 'ff02::1', '2001:db8::1',
+            '::ffff:10.0.0.1', '2002:0a00:0001::1',
+            '2001:0:4136:e378:8000:63bf:3fff:fdd2', '2606:4700::1111',
+            'fd00:ec2::254', 'fd00:0ec2:0000:0000:0000:0000:0000:0254',
+            'fd20:ce::254', 'fd20:00ce:0000:0000:0000:0000:0000:0254',
+        )
+        for address in forbidden:
+            host = '[%s]' % address if ':' in address else address
+            with self.subTest(address=address):
+                with self.assertRaises(ValueError):
+                    self._net(['http://%s:8080' % host])
+        allowed = ('10.0.0.0', '10.255.255.255', '172.16.0.0', '172.31.255.255',
+                   '192.168.0.0', '192.168.255.255', 'fc00::', 'fdff:ffff::1')
+        for address in allowed:
+            host = '[%s]' % address if ':' in address else address
+            net = self._net(['http://%s:8080' % host])
+            self.assertIsNotNone(net._private_origin('http', address, 8080))
+
+    def test_cross_origin_redirect_closes_without_drain_or_next_open(self):
+        net = self._net(['http://10.0.0.1:8080', 'http://10.0.0.2:8080',
+                         'https://10.0.0.1:8080', 'http://10.0.0.1:8081'])
+        targets = (
+            ('http://public.example/start', 'http://10.0.0.1:8080/final'),
+            ('http://10.0.0.1:8080/start', 'http://10.0.0.2:8080/final'),
+            ('http://10.0.0.1:8080/start', 'https://10.0.0.1:8080/final'),
+            ('http://10.0.0.1:8080/start', 'http://10.0.0.1:8081/final'),
+        )
+        for source, target in targets:
+            with self.subTest(source=source, target=target):
+                handler = netmod._PinnedRedirectHandler(net)
+                handler.parent = mock.Mock()
+                req = urllib.request.Request(source)
+                req.timeout = 1.0
+                fp = _FakeRedirectFP()
+                with self.assertRaises(netmod.NetPolicyError):
+                    handler.http_error_302(req, fp, 302, 'Found',
+                                          TestRedirectHandlerDeadline._headers(target))
+                self.assertTrue(fp.closed)
+                self.assertFalse(fp.read_called)
+                handler.parent.open.assert_not_called()
+
+
+class TestPrivateSourceIntegration(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.server = _Server(('127.0.0.1', 0), _Handler)
+        cls.thread = threading.Thread(target=cls.server.serve_forever, daemon=True)
+        cls.thread.start()
+        cls.port = cls.server.server_port
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.server.shutdown()
+        cls.server.server_close()
+        cls.thread.join(timeout=2.0)
+
+    def _run(self, host, path, reject=False):
+        net = TestPrivateSourcePolicy._net([
+            'http://10.0.0.1:%d' % self.port,
+            'http://10.0.0.2:%d' % self.port,
+        ])
+        real_connect = netmod._connect_pinned
+        calls = []
+
+        def connect(addrs, timeout, source_address):
+            calls.append(addrs)
+            # 仅把已作策略决定的最终连接送往合成 fixture，保留上层真实 handler 链。
+            local = [(socket.AF_INET, socket.SOCK_STREAM, 6, '', ('127.0.0.1', self.port))]
+            return real_connect(local, timeout, source_address)
+
+        public = [(socket.AF_INET, socket.SOCK_STREAM, 6, '', ('93.184.216.34', self.port))]
+        with mock.patch.object(netmod.socket, 'getaddrinfo', return_value=public) as dns:
+            with mock.patch.object(netmod, '_connect_pinned', side_effect=connect):
+                url = 'http://%s:%d%s' % (host, self.port, path)
+                if reject:
+                    with self.assertRaises(netmod.NetPolicyError):
+                        net.fetch_ex(url, timeout=1.0)
+                else:
+                    status, body, _, final_url = net.fetch_ex(url, timeout=1.0)
+                    self.assertEqual(status, 200)
+                    self.assertEqual(body, _Server.fast_body)
+                    self.assertTrue(final_url.endswith('/fast'))
+        self.assertEqual(dns.call_count, sum(info[0][4][0] == '93.184.216.34' for info in calls))
+        return calls
+
+    def test_authorized_private_fetch_and_same_origin_redirect(self):
+        for path, hops in (('/fast', 1), ('/policy_redirect/same', 2)):
+            with self.subTest(path=path):
+                calls = self._run('10.0.0.1', path)
+                self.assertEqual(len(calls), hops)
+                self.assertTrue(all(info[0][4] == ('10.0.0.1', self.port) for info in calls))
+
+    def test_public_redirect_to_authorized_private_rejects_before_next_connect(self):
+        calls = self._run('public.example', '/policy_redirect/private_a', reject=True)
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(calls[0][0][4], ('93.184.216.34', self.port))
+
+    def test_private_redirect_to_other_authorized_private_rejects_before_next_connect(self):
+        calls = self._run('10.0.0.1', '/policy_redirect/private_b', reject=True)
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(calls[0][0][4], ('10.0.0.1', self.port))
+
+    def test_private_redirect_to_public_uses_original_public_policy(self):
+        calls = self._run('10.0.0.1', '/policy_redirect/public')
+        self.assertEqual([info[0][4][0] for info in calls], ['10.0.0.1', '93.184.216.34'])
 
 
 class TestFetchRetry(unittest.TestCase):

@@ -14,6 +14,10 @@ PERSONAL_PATH = re.compile(r'/Users/[A-Za-z0-9_.-]{2,}(?:/|\b)|/volume\d+/')
 PRIVATE_IP = re.compile(r'(?<![\d.])(?:10\.(?:\d{1,3}\.){2}\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}|172\.(?:1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3})(?![\d.])')
 SECRET = re.compile(r'-----BEGIN (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----|\bgh[pousr]_[A-Za-z0-9]{25,}|\bgithub_pat_[A-Za-z0-9_]{35,}|\bAKIA[A-Z0-9]{16}|\bsk-(?:proj-)?[A-Za-z0-9_-]{32,}')
 EXAMPLE_IPS = {'10.0.2.2', '192.168.1.10', '192.168.1.100', '192.168.1.2'}
+# Only complete quoted standards in the policy module are exempt; the rest of
+# the same line still goes through the normal private-address scan.
+RFC1918_CONFIG_LITERAL = re.compile(
+    r'''(?<![\w'"\\])(['"])(?:10\.0\.0\.0/8|172\.16\.0\.0/12|192\.168\.0\.0/16)\1(?![\w'"\\])''')
 LEGACY_FFMPEG_AAR_PATHS = {
     'app/libs/media3-decoder-ffmpeg-1.11.0-mp3.aar',
     'app/libs/media3-decoder-ffmpeg-1.11.0.aar',
@@ -58,7 +62,9 @@ def violations(name: str, data: bytes) -> list[tuple[int, str]]:
             hits.append((number, 'personal-path'))
         if SECRET.search(line):
             hits.append((number, 'secret-format'))
-        if not is_test and any(m.group() not in EXAMPLE_IPS for m in PRIVATE_IP.finditer(line)):
+        address_line = (RFC1918_CONFIG_LITERAL.sub(' ', line)
+                        if name == 'server/app/config.py' else line)
+        if not is_test and any(m.group() not in EXAMPLE_IPS for m in PRIVATE_IP.finditer(address_line)):
             hits.append((number, 'private-deployment-address'))
     return hits
 

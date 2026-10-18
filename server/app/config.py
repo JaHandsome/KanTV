@@ -6,9 +6,12 @@
 - 所有周期/阈值/端口/路径外置，代码内零硬编码。
 """
 import copy
+import ipaddress
 import json
 import os
+import re
 import threading
+from urllib.parse import urlsplit
 
 from app.logutil import get_logger
 
@@ -43,6 +46,7 @@ DEFAULT_SETTINGS = {
         'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120',
         'retries': 2,
         'backoff_s': 1.5,
+        'private_source_origins': [],
         'repo_fetch_limit': 2097152,
         'probe_fetch_limit': 393216,
         'jsdelivr_prefix': 'https://cdn.jsdelivr.net/gh/',
@@ -158,6 +162,44 @@ _DOMAINS = (
 )
 
 
+_PRIVATE_SOURCE_NETS = tuple(ipaddress.ip_network(value) for value in (
+    '10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16', 'fc00::/7',
+))
+# 标准云元数据地址落在 ULA 内，不能通过私网源授权绕过元数据边界。
+_PRIVATE_SOURCE_METADATA_IPS = frozenset(ipaddress.ip_address(value) for value in (
+    'fd00:ec2::254', 'fd20:ce::254',
+))
+_PRIVATE_ORIGIN = re.compile(
+    r'https?://(?:\[[0-9a-f:]+\]|[0-9.]+):[0-9]+', re.IGNORECASE)
+
+
+def _compile_private_source_origins(settings):
+    """严格 origin 白名单；只返回规范 IP，不解析 DNS，也不在错误中回显配置。"""
+    field = 'network.private_source_origins'
+    network = settings.get('network')
+    if not isinstance(network, dict):
+        raise ValueError('%s: network must be an object' % field)
+    entries = network.get('private_source_origins', [])
+    if not isinstance(entries, list):
+        raise ValueError('%s: must be a list' % field)
+    origins = set()
+    for index, value in enumerate(entries):
+        try:
+            # fullmatch 也拒绝空白、userinfo、zone、path（包括 /）、query 和 fragment。
+            if not isinstance(value, str) or not _PRIVATE_ORIGIN.fullmatch(value):
+                raise ValueError()
+            parts = urlsplit(value)
+            ip = ipaddress.ip_address(parts.hostname)
+            port = parts.port
+            if (not 0 < port <= 65535 or ip in _PRIVATE_SOURCE_METADATA_IPS
+                    or not any(ip in net for net in _PRIVATE_SOURCE_NETS)):
+                raise ValueError()
+        except ValueError:
+            raise ValueError('%s[%d]: invalid private source origin' % (field, index)) from None
+        origins.add((parts.scheme.lower(), str(ip), port))
+    return frozenset(origins)
+
+
 def _deep_merge(base, override):
     """深合并：override 覆盖 base，dict 递归，其余类型直接覆盖。"""
     out = copy.deepcopy(base)
@@ -224,6 +266,7 @@ class Config(object):
         self.settings = _deep_merge(
             DEFAULT_SETTINGS,
             _load_json(os.path.join(self.config_dir, 'settings.json'), {}))
+        _compile_private_source_origins(self.settings)
         self.channels = _deep_merge(
             DEFAULT_CHANNELS,
             _load_json(os.path.join(self.config_dir, 'channels.json'), {}))
@@ -251,7 +294,14 @@ class Config(object):
             if data is None:
                 log.error('配置热加载失败, 保留上一轮生效配置: %s', fname)
                 continue
-            updates.append((attr, fname, _deep_merge(default, data)))
+            merged = _deep_merge(default, data)
+            if attr == 'settings':
+                try:
+                    _compile_private_source_origins(merged)
+                except ValueError as exc:
+                    log.error('配置热加载失败, 保留上一轮生效配置: %s (%s)', fname, exc)
+                    continue
+            updates.append((attr, fname, merged))
         with self.lock:
             for attr, fname, merged in updates:
                 cur = getattr(self, attr)

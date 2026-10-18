@@ -26,6 +26,7 @@
     "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120",
     "retries": 2,
     "backoff_s": 1.5,
+    "private_source_origins": [],
     "repo_fetch_limit": 2097152,
     "probe_fetch_limit": 393216,
     "jsdelivr_prefix": "https://cdn.jsdelivr.net/gh/",

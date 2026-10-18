@@ -19,6 +19,7 @@ class PublicConfigTests(unittest.TestCase):
         self.assertEqual('localhost', example['http']['snippet_host'])
         self.assertEqual({'enabled': False, 'feedback_token': ''}, example['hub'])
         self.assertEqual({}, example['signed_url_params_by_host'])
+        self.assertEqual([], example['network']['private_source_origins'])
 
     def test_initialization_uses_empty_sources_and_disabled_hub(self):
         with tempfile.TemporaryDirectory() as root:
@@ -29,7 +30,43 @@ class PublicConfigTests(unittest.TestCase):
             self.assertEqual([], cfg.repos['repos'])
             self.assertEqual([], cfg.url_lists['lists'])
             self.assertEqual([], cfg.channels['channels'])
+            self.assertEqual([], cfg.settings['network']['private_source_origins'])
             self.assertEqual('http://localhost:8420/live.txt', cfg.snippet_url())
+
+    def test_invalid_private_origins_reject_initial_configuration_without_echo(self):
+        invalid_values = [None, '', {}, True, ['http://10.0.0.1:8080', 'sensitive-invalid']]
+        for value in invalid_values:
+            with self.subTest(value_type=type(value).__name__):
+                with tempfile.TemporaryDirectory() as root:
+                    destination = Path(root) / 'config'
+                    destination.mkdir()
+                    (destination / 'settings.json').write_text(json.dumps({
+                        'network': {'private_source_origins': value},
+                    }))
+                    with self.assertRaises(ValueError) as caught:
+                        Config(root)
+                    self.assertIn('network.private_source_origins', str(caught.exception))
+                    self.assertNotIn('sensitive-invalid', str(caught.exception))
+                    self.assertNotIn('10.0.0.1', str(caught.exception))
+        with tempfile.TemporaryDirectory() as root:
+            destination = Path(root) / 'config'
+            destination.mkdir()
+            (destination / 'settings.json').write_text('{"network": null}')
+            with self.assertRaisesRegex(ValueError, 'network.private_source_origins'):
+                Config(root)
+
+    def test_invalid_private_origin_reload_preserves_settings(self):
+        with tempfile.TemporaryDirectory() as root:
+            initialize(Path(root) / 'config')
+            cfg = Config(root)
+            previous = cfg.settings
+            (Path(root) / 'config/settings.json').write_text(json.dumps({
+                'network': {'private_source_origins': ['sensitive-invalid']},
+            }))
+            with self.assertLogs('config', level='ERROR') as logged:
+                cfg.reload()
+            self.assertIs(previous, cfg.settings)
+            self.assertNotIn('sensitive-invalid', '\n'.join(logged.output))
 
     def test_existing_configuration_is_never_overwritten(self):
         with tempfile.TemporaryDirectory() as root:

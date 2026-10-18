@@ -31,6 +31,36 @@ class PublicTreeTests(unittest.TestCase):
         self.assertEqual([], violations('server/config/settings.example.json', b'{}'))
         self.assertEqual([], violations('app/src/main/assets/licenses/FFmpeg-LGPL-2.1.txt', b'license'))
 
+    def test_rfc1918_standards_only_pass_as_quoted_config_literals(self):
+        standards = (b'10.0.0.0/8', b'172.16.0.0/12', b'192.168.0.0/16')
+        for cidr in standards:
+            for quote in (b"'", b'"'):
+                literal = quote + cidr + quote
+                with self.subTest(cidr=cidr, quote=quote):
+                    self.assertEqual([], violations('server/app/config.py', literal))
+                    self.assertIn((1, 'private-deployment-address'),
+                                  violations('server/app/other.py', literal))
+            self.assertIn((1, 'private-deployment-address'),
+                          violations('server/app/config.py', cidr))
+
+    def test_rfc1918_exception_does_not_hide_other_addresses_or_url_content(self):
+        allowed = b"'10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16', "
+        extra_addresses = (
+            b"'http://192.168.77.4:8080/live'",
+            b"'http://10.0.0.0/8'", b"'192.168.77.4'",
+            b"'10.0.0.0/16'", b"'10.0.0.0/8/path'",
+            b'''"'10.0.0.0/8'"''', b"prefix'10.0.0.0/8'",
+        )
+        for value in extra_addresses:
+            with self.subTest(value=value):
+                self.assertIn((1, 'private-deployment-address'),
+                              violations('server/app/config.py', allowed + value))
+
+    def test_rfc1918_exception_keeps_secret_and_personal_path_checks(self):
+        line = b"'10.0.0.0/8' " + b'/' + b'Users/owner/private gh' + b'p_' + b'x' * 30
+        self.assertIn((1, 'personal-path'), violations('server/app/config.py', line))
+        self.assertIn((1, 'secret-format'), violations('server/app/config.py', line))
+
 
 if __name__ == '__main__':
     unittest.main()

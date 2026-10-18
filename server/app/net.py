@@ -8,9 +8,9 @@
 - fetch_retry：仅对瞬态网络异常与指定 HTTP 状态重试 + 指数退避；策略拒绝与
   永久状态立即失败；
 - SSRF 边界：初始 URL 与每个重定向目标都必须是规范 http/https（拒绝 userinfo、
-  空 host、非法端口）；解析结果必须全部为公网单播地址；实际连接只使用同一次
-  已校验解析得到的 sockaddr（防 DNS rebinding），HTTPS 仍以原 hostname 作 SNI；
-  禁用环境代理；
+  空 host、非法端口）；默认解析结果必须全部为公网单播地址；显式授权的精确私网
+  literal origin 使用固定 sockaddr，且不允许跨 origin 重定向进入；实际连接只使用
+  已校验 sockaddr（防 DNS rebinding），HTTPS 仍以原 hostname 作 SNI；禁用环境代理；
 - jsdelivr_url / ghproxy_url：GitHub 仓库内容的两个 CDN 通道 URL 构造；
 - 含非 ASCII 字符的 URL 自动 quote（移植探针 enc()）。
 """
@@ -27,6 +27,7 @@ import urllib.error
 import urllib.request
 from urllib.parse import quote, urljoin, urlparse, urlsplit, urlunparse
 
+from app.config import _compile_private_source_origins
 from app.logutil import get_logger
 
 log = get_logger('net')
@@ -329,7 +330,7 @@ class _PinnedHTTPHandler(urllib.request.HTTPHandler):
         scheme, host, port = _validate_url(req.full_url)
         if scheme != 'http':
             raise NetPolicyError('http handler got %r URL' % (scheme,))
-        addrs = self._client._resolver(host, port or _DEFAULT_PORTS['http'])
+        addrs = self._client._resolve_target(scheme, host, port)
 
         def factory(host_arg, timeout=None, **kwargs):
             deadline = getattr(req, _DEADLINE_ATTR, None)
@@ -356,7 +357,7 @@ class _PinnedHTTPSHandler(urllib.request.HTTPSHandler):
         scheme, host, port = _validate_url(req.full_url)
         if scheme != 'https':
             raise NetPolicyError('https handler got %r URL' % (scheme,))
-        addrs = self._client._resolver(host, port or _DEFAULT_PORTS['https'])
+        addrs = self._client._resolve_target(scheme, host, port)
 
         def factory(host_arg, timeout=None, **kwargs):
             deadline = getattr(req, _DEADLINE_ATTR, None)
@@ -384,9 +385,18 @@ class _PinnedRedirectHandler(urllib.request.HTTPRedirectHandler):
     下一跳。DNS 解析仍受标准库限制（无法强制中断），此处不改变该既有说明。
     """
 
+    def __init__(self, client=None):
+        urllib.request.HTTPRedirectHandler.__init__(self)
+        self._client = client
+
     def redirect_request(self, req, fp, code, msg, headers, newurl):
         try:
-            _validate_url(newurl)
+            target = _validate_url(newurl)
+            if self._client is not None:
+                new_origin = self._client._private_origin(*target)
+                if (new_origin is not None and
+                        new_origin != self._client._private_origin(*_validate_url(req.full_url))):
+                    raise NetPolicyError('cross-origin redirect to private source is blocked')
         except Exception:
             # 策略拒绝也立即释放当前 30x 响应，避免连接留待 GC。
             self._close_redirect_response(fp)
@@ -471,6 +481,8 @@ class NetClient(object):
 
     def __init__(self, cfg):
         self.cfg = cfg
+        # 与并发闸门一样，授权在启动时冻结；配置热更新不会扩大既有实例权限。
+        self._private_source_origins = _compile_private_source_origins(cfg.settings)
         self._ssl_ctx = ssl.create_default_context()
         # DNS 解析 + 公网地址校验：实例级注入点，生产默认策略为 _resolve_pinned，
         # 只有测试实例可以替换（不允许在默认策略中放行回环/私网）。
@@ -479,13 +491,34 @@ class NetClient(object):
         # 自定义 http/https/redirect handler 保证每个 hop 重新校验并绑定地址。
         self._opener = urllib.request.build_opener(
             urllib.request.ProxyHandler({}),
-            _PinnedRedirectHandler(),
+            _PinnedRedirectHandler(self),
             _PinnedHTTPHandler(self),
             _PinnedHTTPSHandler(self, self._ssl_ctx),
         )
         # 并发闸门：全局 ≤ net_concurrency（改配置需重启进程生效，见部署说明）
         self.gate = threading.BoundedSemaphore(
             int(cfg.settings['limits']['net_concurrency']))
+
+    def _private_origin(self, scheme, host, port):
+        """只识别白名单 literal IP origin；域名即使解析到授权 IP 也无此权限。"""
+        try:
+            ip = ipaddress.ip_address(host)
+        except ValueError:
+            return None
+        origin = (scheme, str(ip), port or _DEFAULT_PORTS[scheme])
+        return origin if origin in self._private_source_origins else None
+
+    def _resolve_target(self, scheme, host, port):
+        origin = self._private_origin(scheme, host, port)
+        if origin is None:
+            return self._resolver(host, port or _DEFAULT_PORTS[scheme])
+        _, address, port = origin
+        # 固定 literal 不进入 DNS；每跳仍把确切 sockaddr 交给原连接绑定实现。
+        if ':' in address:
+            return [(socket.AF_INET6, socket.SOCK_STREAM, socket.IPPROTO_TCP, '',
+                     (address, port, 0, 0))]
+        return [(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP, '',
+                 (address, port))]
 
     # ---------- 基础 ----------
     @property
