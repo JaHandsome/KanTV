@@ -63,6 +63,7 @@ jobs:
           python3 -m unittest discover -s tools -p 'test_public*.py'
           python3 -m unittest discover -s tools/apk_release -p 'test_*.py'
           python3 -m unittest discover -s tools/apk_distribution -p 'test_*.py'
+          python3 -m unittest discover -s tools/lan_release -p 'test_*.py'
       - name: Server offline tests (runner Python 3.12, no pip dependencies)
         run: python3.12 server/tests/run_offline.py
 

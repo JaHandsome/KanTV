@@ -100,9 +100,23 @@ class PublishTests(_Harness):
         self.assert_preserved()
 
     def test_explicit_activation_switches_both_and_preserves_old_apks(self):
-        self.receive(self.archive(), activate=True)
-        for name in publish.MANIFEST_NAMES:
+        import os
+        for name, mode in zip(publish.MANIFEST_NAMES, (0o644, 0o640)):
+            (self.target / name).chmod(mode)
+        expected_modes = dict(zip(publish.MANIFEST_NAMES, (0o644, 0o640)))
+        replacement_modes = {}
+        original_replace = os.replace
+        def inspect_mode_before_replace(source, destination):
+            destination = Path(destination)
+            if destination.parent == self.target and destination.name in expected_modes:
+                replacement_modes[destination.name] = Path(source).stat().st_mode & 0o777
+            return original_replace(source, destination)
+        with mock.patch.object(publish.os, 'replace', side_effect=inspect_mode_before_replace):
+            self.receive(self.archive(), activate=True)
+        self.assertEqual(expected_modes, replacement_modes)
+        for name, mode in zip(publish.MANIFEST_NAMES, (0o644, 0o640)):
             self.assertEqual(54, release.load_manifest_file(str(self.target / name))['versionCode'])
+            self.assertEqual(mode, (self.target / name).stat().st_mode & 0o777)
         for name, content in self.original.items():
             if name.endswith('.apk'):
                 self.assertEqual(content, (self.target / name).read_bytes())
@@ -112,15 +126,19 @@ class PublishTests(_Harness):
         self.assert_preserved()
 
     def test_second_manifest_switch_failure_restores_both_exactly(self):
-        original_write = release.atomic_write_text
-        def fail_legacy_once(path, text):
+        original_write = publish._atomic_write_manifest
+        for name, mode in zip(publish.MANIFEST_NAMES, (0o644, 0o640)):
+            (self.target / name).chmod(mode)
+        def fail_legacy_once(path, text, mode):
             if Path(path) == self.target / 'latest.json' and '"versionCode": 54' in text:
                 raise OSError('injected second manifest replacement failure')
-            return original_write(path, text)
-        with mock.patch.object(release, 'atomic_write_text', side_effect=fail_legacy_once):
+            return original_write(path, text, mode)
+        with mock.patch.object(publish, '_atomic_write_manifest', side_effect=fail_legacy_once):
             with self.assertRaises(OSError):
                 self.apply(True)
         self.assert_preserved()
+        for name, mode in zip(publish.MANIFEST_NAMES, (0o644, 0o640)):
+            self.assertEqual(mode, (self.target / name).stat().st_mode & 0o777)
         self.assertTrue(list((self.target / 'candidates').glob('*/rollback-latest.json')))
 
     def test_wrong_nas_identity_rejected_before_upload(self):

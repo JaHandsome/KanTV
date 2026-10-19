@@ -9,6 +9,7 @@ from pathlib import Path
 import shlex
 import shutil
 import socket
+import stat
 import subprocess
 import sys
 import tarfile
@@ -18,6 +19,23 @@ import lan_release as release
 
 
 MANIFEST_NAMES = tuple(release.manifest_name_for_abi(abi) for abi in release.SUPPORTED_ABIS)
+
+
+def _atomic_write_manifest(path, text, mode):
+    """原子替换稳定清单，并在替换前保留原有读取权限。"""
+    directory = os.path.dirname(path) or "."
+    descriptor, temporary = tempfile.mkstemp(prefix=".release-", suffix=".tmp", dir=directory)
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+            handle.write(text)
+            handle.flush()
+            os.fchmod(handle.fileno(), mode)
+            os.fsync(handle.fileno())
+        os.replace(temporary, path)
+        release._fsync_directory(directory)
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
 
 
 def checked_directory(directory, application_id, cert):
@@ -68,6 +86,7 @@ def apply_candidate(staging, target, application_id, cert, activate=False):
                 if path.is_symlink() or not path.is_file() or release.sha256_file(str(path)) != manifest['sha256']:
                     raise release.ManifestError(release.REASON_HASH, '同名 APK 内容不同；拒绝覆盖')
         originals = {name: (target / name).read_text(encoding='utf-8') for name in MANIFEST_NAMES}
+        original_modes = {name: stat.S_IMODE((target / name).stat().st_mode) for name in MANIFEST_NAMES}
         candidates = target / 'candidates'
         if candidates.is_symlink():
             raise release.ManifestError('MANIFEST_INVALID', '候选目录不能是符号链接')
@@ -89,13 +108,14 @@ def apply_candidate(staging, target, application_id, cert, activate=False):
         if activate:
             try:
                 for name in reversed(MANIFEST_NAMES):
-                    release.atomic_write_text(str(target / name), (saved / name).read_text(encoding='utf-8'))
+                    _atomic_write_manifest(str(target / name), (saved / name).read_text(encoding='utf-8'),
+                                           original_modes[name])
             except BaseException:
                 # 保留候选和回滚快照；恢复失败必须上报，不能声称发布成功。
                 failures = []
                 for name in MANIFEST_NAMES:
                     try:
-                        release.atomic_write_text(str(target / name), originals[name])
+                        _atomic_write_manifest(str(target / name), originals[name], original_modes[name])
                     except OSError:
                         failures.append(name)
                 if failures:

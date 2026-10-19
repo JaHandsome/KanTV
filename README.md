@@ -2,9 +2,20 @@
 
 KanTV 是 Android TV 直播客户端，支持导入自己的 M3U/TXT 播放列表和浏览内置官网频道。可选服务端位于 `server/`，提供列表生成、线路健康检查与 Hub 接口；客户端和服务端在同一仓库维护。
 
-**源码与已核验的 FFmpeg r2 构建材料已公开，当前不提供预编译 APK。** 请按下面的步骤自行构建。仓库不附带私人播放源、订阅凭据或家庭服务器配对；只使用客户端无需部署服务端。
+源码、FFmpeg r2 构建材料和首个公开 APK 测试版一并提供。仓库及通用 APK 不附带私人播放源、订阅凭据或家庭服务器配对；只使用客户端无需部署服务端。
 
 公开 APK 候选的构建、分发材料以及 NAS 更新清单的关系见 [APK 发布说明](docs/APK_RELEASE.md)。源码更新不会自动切换家庭应用的稳定更新入口。
+
+## 下载公开测试版
+
+`0.2.41-rc1`（versionCode `54`，包名 `com.kantv.app`）是公开测试版。打开[预发布页面](https://github.com/JaHandsome/KanTV/releases/tag/v0.2.41-rc1)，按设备 ABI 只下载并安装一个 APK：
+
+- [arm64-v8a APK](https://github.com/JaHandsome/KanTV/releases/download/v0.2.41-rc1/com.kantv.app-v54-arm64-v8a.apk)
+- [armeabi-v7a APK](https://github.com/JaHandsome/KanTV/releases/download/v0.2.41-rc1/com.kantv.app-v54-armeabi-v7a.apk)
+
+需要 Android 8.0 / API 26 或更新版本。客户端可独立使用，不需要 NAS：在设置内选择已适配的官网频道，或导入自己有权使用的 M3U。频道目录只包含应用已适配的频道；不支持自动解析任意网页，也不保证所有频道、线路或设备均可播放。NAS 是可选的额外列表与 Hub 服务，见[服务端部署说明](server/deploy/README.md)。
+
+发行 tag 对应本次 APK 使用的精确源码提交；发行附件中的 `kantv-source.tar.gz` 与该 APK 绑定。后续 `main` 上的文档或发布权限修复不属于这个 APK 的构建来源，不能用可变的 `main` 当前版本替代 tag 和发行附件。此公开测试版不改变家庭稳定更新入口。签名、SHA256、构建来源及测试覆盖见 [APK 发布说明](docs/APK_RELEASE.md)。
 
 ## 快速开始：构建客户端
 
