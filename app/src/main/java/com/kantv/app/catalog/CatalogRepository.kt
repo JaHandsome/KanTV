@@ -81,19 +81,31 @@ class CatalogRepository(
     /** Add a stable page URL without replacing the user's existing playlist. */
     suspend fun addWebLivePage(url: String): ChannelEntity {
         val page = requireNotNull(com.kantv.app.playback.SupportedWebLivePage.from(url))
-        val channelId = stableId(page)
-        return database.withTransaction {
+        return mergeWebLivePages(listOf(page)).single()
+    }
+
+    /** One atomic merge; it never replaces playlists, subscriptions, or source ownership. */
+    suspend fun addOfficialWebPages(pages: List<SupportedWebLivePage>): List<ChannelEntity> =
+        mergeWebLivePages(OfficialWebsiteCatalog.canonicalSelection(pages))
+
+    private suspend fun mergeWebLivePages(pages: List<SupportedWebLivePage>): List<ChannelEntity> =
+        database.withTransaction {
             val current = dao.allChannels().toMutableList()
-            val prototype = webPageEntity(page, channelId, (current.maxOfOrNull { it.position } ?: -1) + 1)
+            var nextPosition = (current.maxOfOrNull { it.position } ?: -1) + 1
             val removed = mutableListOf<String>()
             val cursor = MergeCursor(current)
-            val entity = mergeInto(cursor, prototype, listOf(webSource(page)), removed)
-            cursor.replaceWith(entity)
+            val selected = pages.map { page ->
+                val prototype = webPageEntity(page, stableId(page), nextPosition)
+                val existed = cursor.hasMergeTarget(prototype)
+                val entity = mergeInto(cursor, prototype, listOf(webSource(page)), removed)
+                cursor.replaceWith(entity)
+                if (!existed) nextPosition++
+                entity
+            }
             if (removed.isNotEmpty()) dao.deleteChannelsByIds(removed.distinct())
             dao.insertChannels(current)
-            entity
+            selected
         }
-    }
 
     /** Subscription metadata never exposes its address; only this repository decrypts it for refresh. */
     suspend fun subscriptions(): List<PlaylistSubscriptionEntity> = dao.subscriptions()

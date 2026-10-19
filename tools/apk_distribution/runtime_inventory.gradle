@@ -1,0 +1,20 @@
+// Read-only dependency report. No application build-script mutation.
+import groovy.json.JsonOutput
+
+gradle.projectsEvaluated {
+    def app = gradle.rootProject.project(':app')
+    app.tasks.register('apkRuntimeInventory') {
+        doLast {
+            def artifacts = app.configurations.getByName('releaseRuntimeClasspath').resolvedConfiguration.resolvedArtifacts
+            def records = artifacts.collect { artifact ->
+                def id = artifact.moduleVersion.id
+                [coordinate: "${id.group}:${id.name}:${id.version}".toString(), file: artifact.file.absolutePath]
+            }.unique { [it.coordinate, it.file] }.sort { it.coordinate }
+            def external = artifacts.collect { it.file }.toSet()
+            records += app.configurations.getByName('releaseRuntimeClasspath').files.findAll { !external.contains(it) }.collect { [coordinate: "local:${it.name}", file: it.absolutePath] }
+            def target = new File(System.getProperty('kantv.inventory.output'))
+            target.parentFile.mkdirs()
+            target.text = JsonOutput.prettyPrint(JsonOutput.toJson(records)) + '\n'
+        }
+    }
+}

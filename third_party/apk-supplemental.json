@@ -1,0 +1,46 @@
+{
+  "files": [
+    {
+      "file": "Protobuf-BSD-3-Clause.txt",
+      "sha256": "6e5e117324afd944dcf67f36cf329843bc1a92229a8cd9bb573d7a83130fea7d",
+      "source": "https://raw.githubusercontent.com/protocolbuffers/protobuf/v28.2/LICENSE",
+      "note": "DataStore 1.1.7 relocated RuntimeVersion.class OSS version constants: 4.28.2"
+    },
+    {
+      "file": "Mozilla-MPL-2.0.txt",
+      "sha256": "3f3d9e0024b1921b067d6f7f88deb4a60cbe7a78e76c64e3f1d7fc3b779b9d04",
+      "source": "https://www.mozilla.org/media/MPL/2.0/index.txt",
+      "note": "Official MPL text; full Gecko embedded third-party page preserved separately"
+    },
+    {
+      "file": "Android-SDK-License.txt",
+      "sha256": "1f8729233617b193fd619213792ae16a41b95d2bbbf525dfe66998252ba68b16",
+      "source": "https://dl.google.com/android/repository/repository2-3.xml",
+      "note": "Exact license element id android-sdk-license; declared by the four Play services POMs"
+    },
+    {
+      "file": "AndroidX-Media3-Apache-2.0.txt",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "source": "https://www.apache.org/licenses/LICENSE-2.0.txt",
+      "note": "Existing full Apache-2.0 text"
+    },
+    {
+      "file": "FFmpeg-LGPL-2.1.txt",
+      "sha256": "246041b6ecf9bc32d718a62c57877c78b5eb397b6467e74ed7ae2626ab189c30",
+      "source": "https://www.gnu.org/licenses/old-licenses/lgpl-2.1.txt",
+      "note": "Existing full LGPL-2.1 text"
+    },
+    {
+      "file": "media3-ffmpeg-notice.txt",
+      "sha256": "03e480cf49c628a58ace14f79de8782fed6d918bd73a0c8ef9f0e1b730e6aa95",
+      "source": "app/libs/media3-ffmpeg-provenance.properties",
+      "note": "Existing exact FFmpeg source and AAR identity"
+    },
+    {
+      "file": "README.txt",
+      "sha256": "0bf3ea51eeca7230836a8801303cd08da30fd3b8751b594b7487869e99a52162",
+      "source": "tools/apk_distribution/README.md",
+      "note": "Runtime source/rights and component notice index"
+    }
+  ]
+}

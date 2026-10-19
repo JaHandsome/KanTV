@@ -37,20 +37,28 @@ class ReviewInstrumentation : Instrumentation() {
     private var seedOnly = false
     private var pauseOnly = false
     private var noNasStartupOnly = false
+    private var websiteImportOnly = false
     override fun onCreate(arguments: Bundle?) {
         super.onCreate(arguments)
         seedOnly = arguments?.getString("seed") == "true"
         pauseOnly = arguments?.getString("pause") == "true"
         noNasStartupOnly = arguments?.getString("noNasStartup") == "true"
+        websiteImportOnly = arguments?.getString("websiteImport") == "true"
         start()
     }
 
     override fun onStart() {
         val result = Bundle()
         try {
+            if (websiteImportOnly) {
+                officialWebsiteBatchImport()
+                result.putString("stream", "PASS official website atomic batch, rollback, idempotence, source and subscription preservation, rejected unknown pages\n")
+                finish(Activity.RESULT_OK, result)
+                return
+            }
             if (noNasStartupOnly) {
                 noNasStartupCompletesWithoutDefaultPlaylist()
-                result.putString("stream", "PASS no-NAS startup, retained inactive Hub preference, official catalogue and manual M3U import\n")
+                result.putString("stream", "PASS no-NAS startup, retained inactive Hub preference, official catalogue, first menu confirmation and manual M3U import\n")
                 finish(Activity.RESULT_OK, result)
                 return
             }
@@ -96,13 +104,44 @@ class ReviewInstrumentation : Instrumentation() {
         val activity = startActivitySync(Intent(targetContext, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         try {
             val prepared = MainActivity::class.java.getDeclaredField("catalogPrepared").apply { isAccessible = true }
+            val bootstrapped = MainActivity::class.java.getDeclaredField("bootstrapped").apply { isAccessible = true }
+            val channels = MainActivity::class.java.getDeclaredField("channels").apply { isAccessible = true }
+            var ready = false
             val deadline = SystemClock.elapsedRealtime() + 30_000L
-            while (!prepared.getBoolean(activity) && SystemClock.elapsedRealtime() < deadline) Thread.sleep(50)
-            check(prepared.getBoolean(activity)) { "Catalogue preparation did not finish without a default playlist" }
+            while (!ready && SystemClock.elapsedRealtime() < deadline) {
+                runOnMainSync {
+                    ready = prepared.getBoolean(activity) && bootstrapped.getBoolean(activity) &&
+                        (channels.get(activity) as List<*>).isNotEmpty()
+                }
+                if (!ready) Thread.sleep(50)
+            }
+            check(ready) { "Catalogue preparation did not finish without a default playlist" }
             check(runBlocking { repository.defaultPlaylistMode() } == null) { "Control unexpectedly had a default playlist" }
             check(runBlocking { repository.hasChannels() }) { "Official catalogue was not installed" }
             check(runBlocking { repository.subscriptions().isEmpty() }) { "Unexpected default network subscription" }
             check(!defaults.contains("default_m3u_applied")) { "Unconfigured default subscription was marked applied" }
+            val screen = MainActivity::class.java.getDeclaredField("screen").apply { isAccessible = true }
+            sendKeyDownUpSync(android.view.KeyEvent.KEYCODE_MENU)
+            waitForIdleSync()
+            runOnMainSync {
+                check(screen.get(activity).toString() == "MENU") { "Menu key did not open the menu" }
+                fun findGuide(view: android.view.View): android.view.View? {
+                    if (view is android.widget.Button && view.text.toString() == "频道与节目表") return view
+                    if (view is android.view.ViewGroup) {
+                        for (index in 0 until view.childCount) findGuide(view.getChildAt(index))?.let { return it }
+                    }
+                    return null
+                }
+                val guide = checkNotNull(findGuide(activity.findViewById(android.R.id.content)))
+                check(guide.requestFocus()) { "Guide menu action could not take focus" }
+            }
+            sendKeyDownUpSync(android.view.KeyEvent.KEYCODE_DPAD_CENTER)
+            waitForIdleSync()
+            runOnMainSync {
+                check(screen.get(activity).toString() in setOf("GROUPS", "CHANNELS")) {
+                    "The first menu confirmation was swallowed before opening the catalogue"
+                }
+            }
             runBlocking {
                 repository.import(
                     "#EXTM3U\n#EXTINF:-1,Manual review\nhttps://example.invalid/manual.m3u8\n",
@@ -212,6 +251,58 @@ class ReviewInstrumentation : Instrumentation() {
             val merged = runBlocking { dao.allChannels() }
             check(merged.size == 1)
             check(runBlocking { repository.playbackRequests(merged.single().id) }.size == 2)
+        } finally {
+            database.close()
+        }
+    }
+
+    private fun officialWebsiteBatchImport() {
+        val database = Room.inMemoryDatabaseBuilder(targetContext, CatalogDatabase::class.java).build()
+        try {
+            val repository = CatalogRepository(database, SecretBox())
+            val dao = database.catalogDao()
+            val catalog = com.kantv.app.playback.OfficialWebChannelCatalog
+            val selected = listOf("official-ysp-cctv1", "official-gdtv-43", "official-yicai-main")
+                .map { id -> catalog.installedPages.single { it.tvgId == id } }
+            runBlocking {
+                val imported = repository.import(
+                    "#EXTM3U\n#EXTINF:-1 tvg-id=\"cctv1\",CCTV-1 综合\nhttps://example.invalid/one.m3u8\n" +
+                        "#EXTINF:-1,Unrelated review\nhttps://example.invalid/two.m3u8\n",
+                    "https://example.invalid/subscription.m3u",
+                )
+                check(imported is com.kantv.app.catalog.CatalogImportResult.Imported)
+            }
+            val original = runBlocking { dao.allChannels() }
+            val playlist = runBlocking { dao.playlist() }
+            val subscriptions = runBlocking { dao.subscriptions() }
+            val failureId = com.kantv.app.data.StableChannelId.create(selected.last().tvgId, null, "")
+            database.openHelper.writableDatabase.execSQL(
+                "CREATE TRIGGER website_fail_batch BEFORE INSERT ON channels WHEN NEW.id = '$failureId' " +
+                    "BEGIN SELECT RAISE(ABORT, 'synthetic batch failure'); END",
+            )
+            check(runCatching { runBlocking { repository.addOfficialWebPages(selected) } }.isFailure)
+            check(runBlocking { dao.allChannels() } == original) { "A failed batch left partial channel writes" }
+            database.openHelper.writableDatabase.execSQL("DROP TRIGGER website_fail_batch")
+            runBlocking { repository.addOfficialWebPages(selected + selected.first()) }
+            val saved = runBlocking { dao.allChannels() }
+            check(saved.size == original.size + 2) { "Batch failed to merge the existing CCTV identity" }
+            original.forEach { before ->
+                val after = saved.single { it.id == before.id }
+                check(after.position == before.position)
+                check(runBlocking { repository.playbackRequests(after.id) }.any { it.uri.startsWith("https://example.invalid/") })
+            }
+            val counts = runBlocking { saved.associate { it.id to repository.sourceCount(it.id) } }
+            runBlocking { repository.addOfficialWebPages(selected) }
+            val repeated = runBlocking { dao.allChannels() }
+            check(repeated.map { it.id to it.position } == saved.map { it.id to it.position })
+            check(runBlocking { repeated.associate { it.id to repository.sourceCount(it.id) } } == counts)
+            val invalid = catalog.pages.first { it.provider == com.kantv.app.playback.OfficialWebProvider.REGIONAL }
+            check(runCatching { runBlocking { repository.addOfficialWebPages(selected + invalid) } }.isFailure)
+            check(runCatching { runBlocking { repository.addOfficialWebPages(listOf(selected.first().copy(url = "https://example.invalid/forged"))) } }.isFailure)
+            check(runBlocking { dao.allChannels() } == repeated)
+            check(com.kantv.app.catalog.OfficialWebsiteCatalog.resolve("https://www.yangshipin.cn/tv/home?pid=unknown") is com.kantv.app.catalog.OfficialWebsiteCatalog.Address.Rejected)
+            check(runBlocking { dao.playlist() } == playlist)
+            check(runBlocking { dao.subscriptions() } == subscriptions)
         } finally {
             database.close()
         }

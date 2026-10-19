@@ -16,7 +16,7 @@ concurrency:
 jobs:
   android:
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: 35
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -42,6 +42,10 @@ jobs:
           node tools/test_gecko_audio_observer.cjs
           node tools/test_gecko_frame_observer.cjs
           node tools/test_gecko_startup_resource.cjs
+      - name: Release build and exact runtime notice check (no signing or upload)
+        run: |
+          ./gradlew -I tools/apk_distribution/runtime_inventory.gradle :app:apkRuntimeInventory :app:assembleRelease :app:lintRelease -Dkantv.inventory.output="${RUNNER_TEMP}/kantv-release-runtime.json" --console=plain
+          python3 tools/apk_distribution/prepare_notices.py --inventory "${RUNNER_TEMP}/kantv-release-runtime.json" --verify-inventory
 
   server-offline:
     runs-on: ubuntu-24.04
@@ -57,6 +61,8 @@ jobs:
           python3 tools/check_public_tree.py
           python3 tools/check_public_history.py
           python3 -m unittest discover -s tools -p 'test_public*.py'
+          python3 -m unittest discover -s tools/apk_release -p 'test_*.py'
+          python3 -m unittest discover -s tools/apk_distribution -p 'test_*.py'
       - name: Server offline tests (runner Python 3.12, no pip dependencies)
         run: python3.12 server/tests/run_offline.py
 

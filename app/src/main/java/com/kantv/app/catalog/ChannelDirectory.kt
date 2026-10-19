@@ -2,7 +2,7 @@ package com.kantv.app.catalog
 
 /** Viewer-facing categories, independent of the platform supplying playback. */
 object ChannelDirectory {
-    val categories = listOf("央视", "卫视", "财经", "体育频道", "少儿频道", "新闻频道", "广东地方", "港澳台", "国际", "教育", "其他地方", "未分类")
+    val categories = listOf("央视", "卫视", "第一财经官网", "体育频道", "少儿频道", "新闻频道", "广东地方", "港澳台", "国际", "教育", "其他地方", "未分类")
 
     fun category(name: String, originalGroup: String?): String {
         val normalized = name.uppercase().replace(" ", "")
@@ -12,7 +12,7 @@ object ChannelDirectory {
             isNewsChannel(name) -> "新闻频道"
             normalized.startsWith("CGTN") -> "国际"
             normalized.startsWith("CCTV") || name.startsWith("央视") || name.startsWith("中央") -> "央视"
-            name.contains("财经") || name.contains("財經") -> "财经"
+            ChannelIdentity.knownKey(null, name) in setOf("finance-yicai", "finance-dfcj") -> "第一财经官网"
             name.contains("卫视") || name.contains("衛視") -> "卫视"
             normalized.startsWith("TVB") || name.contains("無綫") || name.contains("无綫") || name.contains("无线新闻") ||
                 name.contains("翡翠") || name.contains("凤凰") || name.contains("鳳凰") ||

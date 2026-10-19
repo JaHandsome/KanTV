@@ -16,6 +16,16 @@
 /.archive/
 /.scratch/
 /.trae/
+# 本机环境与签名密码不属于公开源码；已经被跟踪的文件仍须另行核查。
+.env
+.env.*
+*.jks
+*.keystore
+*.p12
+*.pfx
+*.pass
+*.apk
+*.aab
 /prototype/server.log
 # User-provided private snapshot: included only in local APKs, never committed.
 /app/src/main/assets/bundled-default/

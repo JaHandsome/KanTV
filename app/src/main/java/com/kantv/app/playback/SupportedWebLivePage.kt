@@ -189,12 +189,12 @@ object OfficialWebChannelCatalog {
         }
         add(SupportedWebLivePage(
             tvgId = "official-yicai-main", name = "第一财经", url = "https://www.yicai.com/tv",
-            officialPlayer = true, groupTitle = "财经直播", provider = OfficialWebProvider.YICAI,
+            officialPlayer = true, groupTitle = "第一财经官网", provider = OfficialWebProvider.YICAI,
             channelLabel = "第一财经", playerSelector = ".videobox", videoSelector = "#video",
         ))
         add(SupportedWebLivePage(
             tvgId = "official-yicai-dfcj", name = "东方财经", url = "https://www.yicai.com/tv#dfcj",
-            officialPlayer = true, groupTitle = "财经直播", provider = OfficialWebProvider.YICAI,
+            officialPlayer = true, groupTitle = "第一财经官网", provider = OfficialWebProvider.YICAI,
             channelLabel = "东方财经", playerSelector = ".videobox", videoSelector = "#video",
         ))
         gdtv.forEach { entry ->

@@ -29,6 +29,7 @@ import com.kantv.app.catalog.AppPreferences
 import com.kantv.app.catalog.CatalogDatabase
 import com.kantv.app.catalog.CatalogImportResult
 import com.kantv.app.catalog.CatalogRepository
+import com.kantv.app.catalog.OfficialWebsiteCatalog
 import com.kantv.app.catalog.ChannelEntity
 import com.kantv.app.catalog.ChannelAliasStore
 import com.kantv.app.catalog.HubRouteRegistry
@@ -473,8 +474,8 @@ class MainActivity : AppCompatActivity() {
         if (listRenderFrozen) {
             listRenderFrozen = false
             // 整表构建不压在按键路径上:解冻只记标记,列表刷新推迟到下一帧。
-            // 解冻键只解冻不移动：本次按键直接消费，避免同一按键先在旧（冻结）列表上
-            // 移动、一帧后整页重建又把焦点拉回锚点的竞态；重建后焦点落在锚点/记忆行。
+            // 浏览页的解冻键只解冻不移动，避免旧列表移动后重建又拉回锚点。
+            // 菜单、设置等页面没有这次列表重建，继续处理原按键。
             val thawScreen = screen
             window.decorView.post {
                 when (thawScreen) {
@@ -483,7 +484,7 @@ class MainActivity : AppCompatActivity() {
                     else -> Unit
                 }
             }
-            if (event.keyCode in setOf(
+            if (thawScreen !in setOf(Screen.MENU, Screen.SETTINGS, Screen.OFFICIAL_SITES, Screen.OFFICIAL_CHANNELS) && event.keyCode in setOf(
                     KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN,
                     KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT,
                     KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER,
@@ -577,6 +578,8 @@ class MainActivity : AppCompatActivity() {
             Screen.CONTROLS -> resumeTelevision()
             Screen.SETTINGS -> if (activeChannelId == null) showMenu() else resumeTelevision()
             Screen.DIAGNOSTICS, Screen.SUBSCRIPTIONS -> showSettings()
+            Screen.OFFICIAL_SITES -> showSettings()
+            Screen.OFFICIAL_CHANNELS -> if (importing) showStatus("正在添加，请稍候…") else showOfficialSites()
             Screen.MENU -> resumeTelevision()
             Screen.FULLSCREEN -> showMenu()
             // GROUPS/CHANNELS/GUIDE 已在上方的回退链分支处理。
@@ -1276,8 +1279,12 @@ class MainActivity : AppCompatActivity() {
         screen = Screen.SETTINGS
         val panel = ui.pagePanel()
         panel.addView(ui.title("设置"))
-        panel.addView(ui.body(message ?: "可使用内置官网频道，或添加 M3U 订阅、直播网页与本地清单。\nM3U 订阅每小时更新，本地文件保持导入时的内容。"))
+        panel.addView(ui.body(message ?: "可直接选择官网频道，无需 M3U 或频道枢纽。也可添加 M3U 订阅、官网地址与本地清单。\nM3U 订阅每小时更新，本地文件保持导入时的内容。"))
+        val official = ui.tvButton("选择官网频道（央视频 / 广东荔枝网 / 第一财经）") { showOfficialSites() }
+        official.id = View.generateViewId()
+        panel.addView(official)
         val input = EditText(this).apply {
+            id = View.generateViewId()
             hint = "输入 M3U 或已支持的直播网页地址"
             setTextColor(WHITE)
             setHintTextColor(0xFF9EA6B2.toInt())
@@ -1288,10 +1295,16 @@ class MainActivity : AppCompatActivity() {
             setPadding(ui.dp(20))
         }
         panel.addView(input, LinearLayout.LayoutParams(matchSize, ui.dp(72)).apply { setMargins(0, ui.dp(12), 0, ui.dp(16)) })
-        panel.addView(ui.tvButton("添加订阅 / 官网地址") {
+        val addAddress = ui.tvButton("添加订阅 / 官网地址") {
             val value = input.text.toString().trim()
             if (value.isNotEmpty()) importFromUrl(value) else showStatus("请输入播放源或直播网页地址")
-        })
+        }
+        addAddress.id = View.generateViewId()
+        official.nextFocusDownId = input.id
+        input.nextFocusUpId = official.id
+        input.nextFocusDownId = addAddress.id
+        addAddress.nextFocusUpId = input.id
+        panel.addView(addAddress)
         panel.addView(ui.tvButton("从文件导入") { filePicker.launch(arrayOf("audio/x-mpegurl", "application/x-mpegurl", "text/plain", "*/*")) })
         panel.addView(ui.tvButton("订阅更新（每小时）") { showSubscriptions() })
         val updateStatus = ui.body("应用更新：${com.kantv.app.update.LanUpdateStatusStore.text(this)}")
@@ -1315,7 +1328,84 @@ class MainActivity : AppCompatActivity() {
         })
         panel.addView(ui.body("播放诊断只显示格式和运行状态，不显示播放地址、请求头或凭据。EPG 与台标预设将在后续阶段加入。"))
         root.addView(ScrollView(this).apply { addView(panel) }, match())
-        panel.post { panel.getChildAt(3)?.requestFocus() }
+        panel.post { official.requestFocus() }
+    }
+
+    private fun showOfficialSites() {
+        if (importing) return
+        clearOverlay()
+        screen = Screen.OFFICIAL_SITES
+        val panel = ui.pagePanel()
+        panel.addView(ui.title("选择官网来源"))
+        panel.addView(ui.body("以下是应用已适配的频道目录，并非官网全站实时扫描。\n可多选或全选添加，无需私有清单；实际播放取决于官网服务、网络与设备条件。"))
+        OfficialWebsiteCatalog.sites.forEach { site ->
+            panel.addView(ui.tvButton("${site.name} · ${site.pages.size} 个已适配频道") { showOfficialChannels(site) })
+        }
+        panel.addView(ui.tvButton("返回设置") { showSettings() })
+        root.addView(ScrollView(this).apply { addView(panel) }, match())
+        panel.post { panel.getChildAt(2)?.requestFocus() }
+    }
+
+    private fun showOfficialChannels(site: OfficialWebsiteCatalog.Site) {
+        if (importing) return
+        clearOverlay()
+        screen = Screen.OFFICIAL_CHANNELS
+        val pages = site.pages
+        val selected = linkedSetOf<String>()
+        val panel = ui.pagePanel()
+        panel.addView(ui.title("${site.name} · 已适配频道"))
+        panel.addView(ui.body("应用已适配目录；添加不换台，返回即取消。"))
+        val summary = ui.body("已选 0 / ${pages.size}")
+        panel.addView(summary)
+        val rows = mutableListOf<Pair<com.kantv.app.playback.SupportedWebLivePage, Button>>()
+        val add = ui.tvButton("添加（0）") {
+            if (selected.isEmpty()) showStatus("请先选择频道，或使用全选")
+            else addOfficialChannels(pages.filter { it.tvgId in selected })
+        }
+        fun updateSelection() {
+            summary.text = "已选 ${selected.size} / ${pages.size}"
+            add.text = "添加（${selected.size}）"
+            rows.forEach { (page, row) -> row.text = "${if (page.tvgId in selected) "☑" else "☐"} ${page.name}" }
+        }
+        val selectAll = ui.tvButton("全选/取消全选") {
+            if (!importing) {
+                if (selected.size == pages.size) selected.clear() else selected.addAll(pages.map { it.tvgId })
+                updateSelection()
+            }
+        }
+        val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        val cancel = ui.tvButton("取消") { if (!importing) showOfficialSites() }
+        listOf(selectAll, add, cancel).forEach { button ->
+            actions.addView(button, LinearLayout.LayoutParams(0, ui.dp(66), 1f).apply {
+                setMargins(ui.dp(4), ui.dp(5), ui.dp(4), ui.dp(5))
+            })
+        }
+        panel.addView(actions)
+        pages.forEach { page ->
+            val row = ui.tvButton("☐ ${page.name}") {
+                if (!importing) {
+                    if (!selected.add(page.tvgId)) selected.remove(page.tvgId)
+                    updateSelection()
+                }
+            }
+            rows += page to row
+            panel.addView(row)
+        }
+        root.addView(ScrollView(this).apply { addView(panel) }, match())
+        panel.post { selectAll.requestFocus() }
+    }
+
+    private fun addOfficialChannels(pages: List<com.kantv.app.playback.SupportedWebLivePage>) {
+        if (importing) return
+        importing = true
+        showStatus("正在添加官网频道…")
+        scope.launch {
+            val result = runCatching { withContext(Dispatchers.IO) { repository.addOfficialWebPages(pages) } }
+            importing = false
+            result.onSuccess { added ->
+                showSettings("已添加或保留 ${added.size} 个官网频道，重复频道已合并；当前播放不变")
+            }.onFailure { showSettings("添加未完成，本批频道未写入，请重试") }
+        }
     }
 
     private fun showSubscriptions() {
@@ -1534,20 +1624,29 @@ class MainActivity : AppCompatActivity() {
 
     private fun importFromUrl(url: String) {
         if (importing) return
-        if (com.kantv.app.playback.SupportedWebLivePage.from(url) != null) {
-            importing = true
-            showStatus("正在添加直播频道…")
-            scope.launch {
-                val result = runCatching {
-                    withContext(Dispatchers.IO) { repository.addWebLivePage(url) }
+        when (val address = OfficialWebsiteCatalog.resolve(url)) {
+            is OfficialWebsiteCatalog.Address.Directory -> { showOfficialChannels(address.site); return }
+            is OfficialWebsiteCatalog.Address.Rejected -> { showSettings(address.message); return }
+            is OfficialWebsiteCatalog.Address.Channel -> {
+                if (address.page in com.kantv.app.playback.OfficialWebChannelCatalog.installedPages) {
+                    addOfficialChannels(listOf(address.page))
+                    return
                 }
-                importing = false
-                result.onSuccess { channel ->
-                    Toast.makeText(this@MainActivity, "已添加 ${channel.name}", Toast.LENGTH_SHORT).show()
-                    play(channel)
-                }.onFailure { showSettings("添加失败，请检查直播网页地址") }
+                // Keep the pre-existing, manually imported legacy TVB single-page path.
+                importing = true
+                showStatus("正在添加直播频道…")
+                scope.launch {
+                    val result = runCatching {
+                        withContext(Dispatchers.IO) { repository.addWebLivePage(address.page.url) }
+                    }
+                    importing = false
+                    result.onSuccess { channel ->
+                        showSettings("已添加 ${channel.name}；当前播放不变")
+                    }.onFailure { showSettings("添加失败，请检查直播网页地址") }
+                }
+                return
             }
-            return
+            OfficialWebsiteCatalog.Address.Other -> Unit
         }
         importing = true
         showStatus("正在导入频道…")
@@ -1680,7 +1779,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun match() = FrameLayout.LayoutParams(matchSize, matchSize)
 
-    private enum class Screen { FULLSCREEN, GROUPS, CHANNELS, CONTROLS, TRACKS, STREAM_INFO, GUIDE, MENU, SETTINGS, DIAGNOSTICS, SUBSCRIPTIONS }
+    private enum class Screen { FULLSCREEN, GROUPS, CHANNELS, CONTROLS, TRACKS, STREAM_INFO, GUIDE, MENU, SETTINGS, DIAGNOSTICS, SUBSCRIPTIONS, OFFICIAL_SITES, OFFICIAL_CHANNELS }
 
     private companion object {
         const val matchSize = ViewGroup.LayoutParams.MATCH_PARENT

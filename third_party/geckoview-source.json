@@ -1,0 +1,13 @@
+{
+  "url": "https://archive.mozilla.org/pub/firefox/releases/146.0.1/source/firefox-146.0.1.source.tar.xz",
+  "sha256": "e9678a0e8473923953e1dc312c37919068623b6aa20adade16266049258191eb",
+  "expected_sha256": "e9678a0e8473923953e1dc312c37919068623b6aa20adade16266049258191eb",
+  "matches_official_SHA256SUMS": true,
+  "bytes": 648938528,
+  "source_revision": "86bb7f6af6312ba3c0161085f854bcdff68f1a91",
+  "tag": "FIREFOX_146_0_1_RELEASE",
+  "tag_verified_via": "https://hg.mozilla.org/releases/mozilla-release/json-rev/FIREFOX_146_0_1_RELEASE",
+  "maven_version": "146.0.20251217121356",
+  "evidence": "Exact POM SCM revision and packaged buildconfig match the official release tag; complete official archive downloaded and SHA256 verified on 2026-10-19. No Gecko modifications.",
+  "checksum_url": "https://archive.mozilla.org/pub/firefox/releases/146.0.1/SHA256SUMS"
+}

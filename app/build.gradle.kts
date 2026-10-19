@@ -89,7 +89,7 @@ android {
         targetSdk = 36
         ndk { abiFilters += targetAbi }
         versionCode = 54
-        versionName = "0.2.41-dev"
+        versionName = "0.2.41-rc1"
         buildConfigField("String", "DEV_PLAYLIST_URL", "\"\"")
         // 开发包保留诊断能力；正式包在 release 中关闭，上传仍须 endpoint+token 双条件。
         buildConfigField("boolean", "KANTV_DIAGNOSTICS", "true")
