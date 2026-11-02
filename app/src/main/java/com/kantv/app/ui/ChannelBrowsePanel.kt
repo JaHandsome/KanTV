@@ -181,8 +181,9 @@ class ChannelBrowsePanel(
             val now = System.currentTimeMillis()
             channelButtons.zip(groupChannels).forEach { (button, channel) ->
                 val schedule = guide.schedules[channel.id]
-                val currentProgramme = schedule?.window(now)?.current
-                val next = schedule?.window(now)?.next
+            val window = schedule?.window(now)
+            val currentProgramme = window?.current
+            val next = window?.next
                 val programme = when {
                     currentProgramme != null -> "正在播：${currentProgramme.title}"
                     next != null -> "接下来：${next.title}"
@@ -216,7 +217,8 @@ class ChannelBrowsePanel(
             if (!showingGuide || generation != guideGeneration || !panel.isAttachedToWindow) return@launch
             val schedule = guide.schedules[channel.id]
             val now = System.currentTimeMillis()
-            val date = java.text.SimpleDateFormat("MM-dd HH:mm", java.util.Locale.CHINA)
+            val startFormat = java.text.SimpleDateFormat("MM-dd HH:mm", java.util.Locale.CHINA)
+            val endFormat = java.text.SimpleDateFormat("HH:mm", java.util.Locale.CHINA)
             message.text = when {
                 schedule?.programmes.isNullOrEmpty() -> "暂未找到这个频道的节目单，可以正常观看直播。"
                 guide.status.state == EpgSourceState.STALE_CACHE -> "更新暂未成功，显示上次缓存节目单，请以实际播出为准。"
@@ -231,7 +233,7 @@ class ChannelBrowsePanel(
                     EpgProgrammeState.CURRENT -> "正在播出 · 确认看直播"
                     EpgProgrammeState.FUTURE -> "即将播出"
                 }
-                val text = "${date.format(java.util.Date(programme.startAtMs))} – ${java.text.SimpleDateFormat("HH:mm", java.util.Locale.CHINA).format(java.util.Date(programme.endAtMs))}\n${programme.title}\n$label"
+                val text = "${startFormat.format(java.util.Date(programme.startAtMs))} – ${endFormat.format(java.util.Date(programme.endAtMs))}\n${programme.title}\n$label"
                 programmes.addView(ui.tvButton(text) {
                     val currentState = programme.stateAt(System.currentTimeMillis())
                     if (currentState == EpgProgrammeState.CURRENT) host.play(channel)

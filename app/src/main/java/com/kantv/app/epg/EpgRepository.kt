@@ -2,6 +2,7 @@ package com.kantv.app.epg
 
 import com.kantv.app.util.Hashing
 import com.kantv.app.util.cacheValidator
+import com.kantv.app.util.openableHttpUrl
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
@@ -12,7 +13,6 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.IOException
 import java.net.HttpURLConnection
-import java.net.URL
 import java.util.Properties
 
 object DefaultEpgSources {
@@ -226,7 +226,8 @@ class UrlConnectionEpgHttpClient(
     private val maxBytes: Int = 12 * 1024 * 1024,
 ) : EpgHttpClient {
     override fun fetch(url: String, etag: String?, lastModified: String?): EpgHttpResult {
-        val connection = (URL(url).openConnection() as HttpURLConnection).apply {
+        val target = openableHttpUrl(url) ?: return EpgHttpResult.Failed(EpgFailureCode.NETWORK)
+        val connection = (target.openConnection() as HttpURLConnection).apply {
             connectTimeout = connectTimeoutMs
             readTimeout = readTimeoutMs
             instanceFollowRedirects = true
