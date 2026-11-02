@@ -80,6 +80,40 @@ class XmlTvParserTest {
         }
     }
 
+    @Test fun rejectsUtf16DoctypeInTheByteFilter() {
+        val xml = """<?xml version="1.0" encoding="UTF-16"?><!DOCTYPE tv [<!ENTITY x "nope">]><tv>&x;</tv>"""
+        for (encoding in listOf(Charsets.UTF_16BE, Charsets.UTF_16LE)) {
+            val bom = if (encoding == Charsets.UTF_16BE) {
+                byteArrayOf(0xFE.toByte(), 0xFF.toByte())
+            } else {
+                byteArrayOf(0xFF.toByte(), 0xFE.toByte())
+            }
+            assertFilterRejected(bom + xml.toByteArray(encoding))
+        }
+    }
+
+    @Test fun rejectsGzippedUtf16DoctypeInTheByteFilter() {
+        val xml = """<!DOCTYPE tv [<!ENTITY x "nope">]><tv/>"""
+        val encoded = byteArrayOf(0xFE.toByte(), 0xFF.toByte()) + xml.toByteArray(Charsets.UTF_16BE)
+        val compressed = ByteArrayOutputStream().also { output ->
+            GZIPOutputStream(output).use { it.write(encoded) }
+        }.toByteArray()
+        assertFilterRejected(compressed)
+    }
+
+    @Test fun parsesUtf16GuideWithoutADoctype() {
+        val xml = """<?xml version="1.0" encoding="UTF-16"?><tv>
+          <channel id="one"><display-name>One</display-name></channel>
+          <programme channel="one" start="20260909060000 +0800" stop="20260909070000 +0800"><title>A</title></programme>
+        </tv>"""
+        val encoded = byteArrayOf(0xFE.toByte(), 0xFF.toByte()) + xml.toByteArray(Charsets.UTF_16BE)
+        val result = XmlTvParser.parse(
+            ByteArrayInputStream(encoded),
+            listOf(EpgChannelRef("1", "one", "One")),
+        )
+        assertEquals(listOf("A"), result.getValue("1").programmes.map { it.title })
+    }
+
     @Test fun keepsProgrammesThatArriveBeforeTheirChannel() {
         val input = """<tv>
           <programme channel="one" start="20260909060000 +0800" stop="20260909070000 +0800"><title>A</title><category>新闻</category></programme>
@@ -124,4 +158,17 @@ class XmlTvParserTest {
           </programme>
         </tv>
     """.trimIndent()
+
+    private fun assertFilterRejected(xml: ByteArray) {
+        val error = assertThrows(Exception::class.java) {
+            XmlTvParser.parse(ByteArrayInputStream(xml), emptyList())
+        }
+        val messages = generateSequence(error as Throwable) { it.cause }
+            .map { it.message.orEmpty() }
+            .toList()
+        assertTrue(
+            messages.joinToString(" | "),
+            messages.any { "XMLTV doctype is not allowed" in it },
+        )
+    }
 }

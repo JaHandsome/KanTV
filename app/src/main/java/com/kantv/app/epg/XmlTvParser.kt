@@ -214,9 +214,16 @@ internal object XmlTvParser {
 
     /**
      * [setFeatureSafely] swallows a parser that rejects `disallow-doctype-decl`.
-     * Internal entity expansion never calls [Handler.resolveEntity], so a DOCTYPE
-     * that gets through can still expand. XMLTV has no DTD; reject the declaration
-     * itself while the bytes are read.
+     * Android's SAX factory does not implement that feature, and internal entity
+     * expansion never calls [Handler.resolveEntity], so a DOCTYPE that gets
+     * through can still expand. XMLTV has no DTD; reject the declaration itself
+     * while the bytes are read.
+     *
+     * UTF-16 and UTF-32 store each ASCII character as a NUL-padded code unit.
+     * A scan that only looks at contiguous UTF-8 bytes misses `<!DOCTYPE` in
+     * those encodings, and the JDK feature that still rejects them is absent
+     * on device. NUL bytes are ignored by the matcher and are not part of a
+     * UTF-8 XMLTV document.
      */
     private class DoctypeRejectingInputStream(
         private val delegate: InputStream,
@@ -240,6 +247,7 @@ internal object XmlTvParser {
         override fun close() = delegate.close()
 
         private fun observe(value: Int) {
+            if (value == 0) return
             if (matched == 0) {
                 if (value == '<'.code) matched = 1
                 return
