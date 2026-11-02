@@ -39,8 +39,9 @@ class OutputBuilder(object):
     def _collect_items(self, profiles=('direct',)):
         """收集每频道线路 -> 排序后的 [{name, cat, urls}]（P0 R5 投递隔离）。
 
-        lineups 为主数据源；某频道无 lineups（冷启动 health 未跑）时回退直查 sources
-        （active + av=video，与 rebuild_lineups 同规则）。两处均按同一口径过滤：
+        lineups 为主数据源。冷启动没有 lineups，或其它 profile 占满名额后 direct
+        不足 max_lines 时，按分数补 sources；已经入选的直链保持 rank。
+        健康度只排了不到 max_lines 条时不补，避免打乱既有次序。两处均按同一口径过滤：
         status='active' AND av LIKE 'video%'（lineups 只是重排快照，源被判 dead/flaky
         或改判音频后、下一轮 rebuild_lineups 之前的窗口期内不得投递，见 delivery.py）；
         NULL 视为不匹配（profile 迁移已回填，回填缺失时由 status._data_invariant 告警；av NULL 正常流程不会以 active 态出现，见 186fa0e reviewer 复核记录）。
@@ -52,41 +53,56 @@ class OutputBuilder(object):
         marks = ','.join('?' * len(profiles))
 
         urls_by_key = {}
+        raw_count = {}
+        allowed = set(profiles)
+        # 先看全部 profile 的 lineups，才能分辨「名额被其它画像占满」和「本来就没排满」。
         rows = self.db.query(
-            'SELECT l.channel_key AS k, s.url AS url FROM lineups l '
-            'JOIN sources s ON s.id = l.source_id '
+            'SELECT l.channel_key AS k, s.url AS url, s.profile AS profile '
+            'FROM lineups l JOIN sources s ON s.id = l.source_id '
             "WHERE s.status='active' AND s.av LIKE 'video%%' "
-            'AND s.profile IN (%s) ORDER BY l.channel_key, l.rank' % marks,
-            tuple(profiles))
+            'ORDER BY l.channel_key, l.rank')
         for r in rows:
-            urls_by_key.setdefault(r['k'], []).append(r['url'])
+            raw_count[r['k']] = raw_count.get(r['k'], 0) + 1
+            if r['profile'] in allowed:
+                urls_by_key.setdefault(r['k'], []).append(r['url'])
 
-        # 回退：lineups 为空（或被 status/av 滤空）时一次取 sources，再按频道截断。
-        # 与原先逐频道 `ORDER BY score DESC, id ASC LIMIT max_lines` 同序、同名额；
-        # 这条 txt/m3u 路径不按 route 过滤，所以截断发生在取回之后、不先丢高分源。
-        missing = []
-        seen_missing = set()
+        # 回退补 sources：没有 lineups，或 lineups 已排满但 direct 被滤短。
+        # 已入选直链保持 rank，只追加还没出现的 URL。未排满的频道不补。
+        short = []
+        seen_short = set()
         for key in channels:
-            if urls_by_key.get(key) or max_lines <= 0 or key in seen_missing:
+            if max_lines <= 0 or key in seen_short:
                 continue
-            seen_missing.add(key)
-            missing.append(key)
-        if missing:
-            key_marks = ','.join('?' * len(missing))
+            have = urls_by_key.get(key) or []
+            if len(have) >= max_lines:
+                continue
+            ranked = raw_count.get(key, 0)
+            if have and ranked < max_lines:
+                continue
+            seen_short.add(key)
+            short.append(key)
+        if short:
+            key_marks = ','.join('?' * len(short))
             rows = self.db.query(
                 'SELECT channel_key, url FROM sources WHERE channel_key IN (%s) '
                 "AND status='active' AND av LIKE 'video%%' AND profile IN (%s) "
                 'ORDER BY channel_key, score DESC, id ASC' % (key_marks, marks),
-                tuple(missing) + tuple(profiles))
+                tuple(short) + tuple(profiles))
             grouped = {}
             for r in rows:
-                bucket = grouped.setdefault(r['channel_key'], [])
-                if len(bucket) < max_lines:
-                    bucket.append(r['url'])
-            for key in missing:
-                picked = grouped.get(key)
-                if picked:
-                    urls_by_key[key] = picked
+                grouped.setdefault(r['channel_key'], []).append(r['url'])
+            for key in short:
+                have = list(urls_by_key.get(key) or [])
+                seen_urls = set(have)
+                for url in grouped.get(key, ()):
+                    if url in seen_urls:
+                        continue
+                    have.append(url)
+                    seen_urls.add(url)
+                    if len(have) >= max_lines:
+                        break
+                if have:
+                    urls_by_key[key] = have
 
         order = {v: i for i, v in enumerate(self.cfg.channels.get('order') or [])}
         gidx = self.cfg.channels.get('group_index') or {}
