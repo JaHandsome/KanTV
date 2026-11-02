@@ -365,6 +365,31 @@ class TestThroughputEvidence(unittest.TestCase):
         self.assertEqual(result[0], 1)
         self.assertEqual(net.calls, ['https://synthetic.invalid/initial', 'https://synthetic.invalid/redirected/child.m3u8', 'https://cdn.invalid/session/segment.ts'])
 
+    def test_wall_clock_jump_does_not_inflate_segment_ratio(self):
+        """分片耗时用单调钟。墙上时钟在下载期间前跳不得把快线算成慢于实时。"""
+        class Net:
+            ua = 'synthetic'
+
+            def fetch_ex(self, url, **kwargs):
+                return 200, b'#EXTM3U\n#EXTINF:4.0,\nseg.ts', '', url
+
+            def fetch_complete(self, url, **kwargs):
+                wall[0] += 30.0
+                mono[0] += 0.5
+                return 200, b'segment-bytes', ''
+
+        wall = [1_000_000.0]
+        mono = [10_000.0]
+        net = Net()
+        with mock.patch('app.health.time.time', side_effect=lambda: wall[0]), \
+                mock.patch('app.health.time.monotonic', side_effect=lambda: mono[0]):
+            ok, ratio, _seg_ms, download_ms, _reason = HealthMonitor(
+                config(), None, net).probe_throughput(
+                    {'container': 'hls', 'url': 'https://synthetic.invalid/a.m3u8'})
+        self.assertEqual(ok, 1)
+        self.assertEqual(download_ms, 500)
+        self.assertLess(ratio, 1.0)
+
     def test_prefix_without_completion_evidence_is_not_a_success(self):
         class Net:
             ua = 'synthetic'
