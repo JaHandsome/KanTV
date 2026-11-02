@@ -88,7 +88,8 @@ class HubSubscriptionCoordinator(
     suspend fun applyDeferredIfAny(nowMs: Long = System.currentTimeMillis()): HubRefreshOutcome? = withContext(Dispatchers.IO) {
         val state = store.state()
         val payload = state.payload ?: return@withContext null
-        if (state.lastAppliedSeq == state.seq) return@withContext null
+        // seq 只跟产物 mtime。播放中缓存的新正文可能 seq 不变、ETag 已变，仍须补应用。
+        if (!state.hasPendingApply) return@withContext null
         val parsed = HubSubscriptionParser.parse(payload) as? HubParseOutcome.Parsed ?: return@withContext null
         if (parsed.subscription.hubSchema > supportedSchema) {
             onProtocolNote(schemaUnsupportedNotice(parsed.subscription.hubSchema))

@@ -110,6 +110,24 @@ class HubSubscriptionStoreTest {
         assertNull(reader.state().signedParamsFingerprint)
     }
 
+    @Test fun `applied etag survives a deferred success with the same seq`() {
+        val prefs = FakeSharedPreferences()
+        val payloadFile = File(temporaryFolder.root, "hub_subscription_payload.json")
+        val writer = HubSubscriptionStore(SharedPreferencesHubSubscriptionPersistence(prefs, payloadFile))
+        val reader = HubSubscriptionStore(SharedPreferencesHubSubscriptionPersistence(prefs, payloadFile))
+
+        writer.recordSuccess(LEGACY_PAYLOAD, "\"v1\"", seq = 9L, nowMs = 1_000L, applied = true)
+        writer.recordSuccess("""{"hub_schema":1,"seq":9,"channels":[]}""", "\"v2\"", seq = 9L, nowMs = 2_000L, applied = false)
+
+        val state = reader.state()
+        assertEquals("\"v2\"", state.etag)
+        assertEquals("\"v1\"", state.lastAppliedEtag)
+        assertEquals(9L, state.seq)
+        assertEquals(9L, state.lastAppliedSeq)
+        assertTrue(state.hasPendingApply)
+        assertTrue(prefs.contains("last_applied_etag"))
+    }
+
     private companion object {
         /** 脱敏 fixture：形状与 v24 payload 一致，不含任何真实流地址。 */
         val LEGACY_PAYLOAD = """

@@ -22,6 +22,12 @@ data class HubSubscriptionState(
     val lastSuccessAtMs: Long = 0L,
     /** 最近一次真正应用到目录的 seq；用于「从未成功过」判定。 */
     val lastAppliedSeq: Long = 0L,
+    /**
+     * 最近一次真正应用到目录时的 ETag。
+     * 服务端 seq 来自产物 mtime，订阅正文可以变而 seq 不动；只比较 seq 会把
+     * 播放期间缓存的新正文当成已经应用过。
+     */
+    val lastAppliedEtag: String? = null,
     /** 固定枚举状态码，永不包含异常文本或 URL。 */
     val status: String = HubSubscriptionStatus.NEVER_FETCHED,
     /**
@@ -33,6 +39,15 @@ data class HubSubscriptionState(
     val hasSuccessfulSubscription: Boolean get() = lastSuccessAtMs > 0L && !payload.isNullOrBlank()
 
     val hasAppliedSubscription: Boolean get() = lastAppliedSeq > 0L
+
+    /** 缓存里有一份还没落到目录的订阅。seq 相同而 ETag 不同也算未应用。 */
+    val hasPendingApply: Boolean
+        get() {
+            if (payload.isNullOrBlank()) return false
+            if (seq != lastAppliedSeq) return true
+            val applied = lastAppliedEtag ?: return false
+            return !etag.isNullOrEmpty() && etag != applied
+        }
 }
 
 object HubSubscriptionStatus {
@@ -99,6 +114,7 @@ class SharedPreferencesHubSubscriptionPersistence internal constructor(
             lastAttemptAtMs = prefs.getLong(KEY_ATTEMPT, 0L),
             lastSuccessAtMs = prefs.getLong(KEY_SUCCESS, 0L),
             lastAppliedSeq = prefs.getLong(KEY_APPLIED_SEQ, 0L),
+            lastAppliedEtag = prefs.getString(KEY_APPLIED_ETAG, null),
             status = prefs.getString(KEY_STATUS, HubSubscriptionStatus.NEVER_FETCHED)
                 ?: HubSubscriptionStatus.NEVER_FETCHED,
             signedParamsFingerprint = prefs.getString(KEY_SIGNED_PARAMS_FP, null),
@@ -114,6 +130,7 @@ class SharedPreferencesHubSubscriptionPersistence internal constructor(
             .putLong(KEY_APPLIED_SEQ, state.lastAppliedSeq)
             .apply {
                 if (state.etag == null) remove(KEY_ETAG) else putString(KEY_ETAG, state.etag)
+                if (state.lastAppliedEtag == null) remove(KEY_APPLIED_ETAG) else putString(KEY_APPLIED_ETAG, state.lastAppliedEtag)
                 // 迁移期遗留：老版本曾把 payload 写进 prefs，读到/写到即清除。
                 remove(KEY_PAYLOAD)
                 if (state.signedParamsFingerprint == null) {
@@ -172,6 +189,7 @@ class SharedPreferencesHubSubscriptionPersistence internal constructor(
         const val KEY_ATTEMPT = "last_attempt_at_ms"
         const val KEY_SUCCESS = "last_success_at_ms"
         const val KEY_APPLIED_SEQ = "last_applied_seq"
+        const val KEY_APPLIED_ETAG = "last_applied_etag"
         const val KEY_STATUS = "status"
         const val KEY_SIGNED_PARAMS_FP = "signed_params_fingerprint"
     }
@@ -224,13 +242,15 @@ class HubSubscriptionStore(
     ): HubSubscriptionState {
         val previous = state()
         if (nowMs < previous.lastAttemptAtMs) return previous
+        val resolvedEtag = etag ?: previous.etag
         val updated = previous.copy(
-            etag = etag ?: previous.etag,
+            etag = resolvedEtag,
             seq = seq,
             payload = payload,
             lastAttemptAtMs = nowMs,
             lastSuccessAtMs = nowMs,
             lastAppliedSeq = if (applied) seq else previous.lastAppliedSeq,
+            lastAppliedEtag = if (applied) resolvedEtag else previous.lastAppliedEtag,
             status = HubSubscriptionStatus.SUCCESS,
             // 服务端投递了指纹才更新锚点；未投递（旧版服务端）保留旧值
             signedParamsFingerprint = signedParamsFingerprint ?: previous.signedParamsFingerprint,
@@ -245,7 +265,10 @@ class HubSubscriptionStore(
     /** 保留成功结果、仅推进「已应用」水位（用于播放结束后补应用）。 */
     fun markApplied(seq: Long): HubSubscriptionState {
         val previous = state()
-        val updated = previous.copy(lastAppliedSeq = seq)
+        val updated = previous.copy(
+            lastAppliedSeq = seq,
+            lastAppliedEtag = previous.etag ?: previous.lastAppliedEtag,
+        )
         persistence.write(updated)
         return updated
     }
