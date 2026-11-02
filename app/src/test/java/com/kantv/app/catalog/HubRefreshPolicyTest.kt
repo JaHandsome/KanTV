@@ -499,6 +499,42 @@ class HubRefreshPolicyTest {
         assertTrue(store.state().hasPendingApply)
     }
 
+    @Test fun `applying a deferred payload does not discard the refresh already in flight`() = runBlocking {
+        val pending = PAYLOAD.replace("token=B", "token=C")
+        val latest = PAYLOAD.replace("token=B", "token=D")
+        val transport = FakeTransport(
+            HubHttpResponse(code = 200, etag = "\"v1\"", contentType = "application/json", body = PAYLOAD.toByteArray()),
+            HubHttpResponse(code = 200, etag = "\"v2\"", contentType = "application/json", body = pending.toByteArray()),
+            HubHttpResponse(code = 200, etag = "\"v3\"", contentType = "application/json", body = latest.toByteArray()),
+        )
+        val sink = RecordingSink()
+        val store = HubSubscriptionStore(InMemoryHubSubscriptionPersistence())
+        val coordinator = coordinator(transport, sink, store)
+
+        assertTrue(coordinator.refresh(force = true, nowMs = 1_000L) is HubRefreshOutcome.Applied)
+        assertEquals(
+            HubRefreshOutcome.Deferred(42L),
+            coordinator.refresh(force = true, playbackActive = { true }, nowMs = 2_000L),
+        )
+        // 下一轮已经记了尝试、响应还在路上。停播补应用的墙钟更晚，不能把这次响应判成过期。
+        store.recordAttempt(3_000L)
+        assertTrue(coordinator.applyDeferredIfAny(nowMs = 3_500L) is HubRefreshOutcome.Applied)
+        assertEquals(
+            "https://example.invalid/news.m3u8?sig=A&token=C",
+            sink.applied.last().channels.single().routes.single().url,
+        )
+
+        val inFlight = coordinator.refresh(force = true, playbackActive = { false }, nowMs = 3_000L)
+        assertTrue(inFlight is HubRefreshOutcome.Applied)
+        assertEquals(
+            "https://example.invalid/news.m3u8?sig=A&token=D",
+            sink.applied.last().channels.single().routes.single().url,
+        )
+        assertEquals("\"v3\"", store.state().etag)
+        assertEquals("\"v3\"", store.state().lastAppliedEtag)
+        assertFalse(store.state().hasPendingApply)
+    }
+
     @Test fun `not due refresh never touches the network`() = runBlocking {
         val transport = FakeTransport()
         val store = HubSubscriptionStore(InMemoryHubSubscriptionPersistence())
