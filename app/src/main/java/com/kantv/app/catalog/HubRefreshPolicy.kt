@@ -71,6 +71,14 @@ object HubRefreshPolicy {
         return nowMs - state.lastAttemptAtMs >= REFRESH_INTERVAL_MS
     }
 
+    /**
+     * 播放已结束，缓存里还有一份成功拉到但没落到目录的订阅。
+     * 这时即使未到拉取间隔，也要把缓存补上：否则下一次条件请求会带着
+     * 这份未应用正文的 ETag，304 只保留屏幕上的旧目录。
+     */
+    fun shouldApplyPending(state: HubSubscriptionState, playbackActive: Boolean): Boolean =
+        !playbackActive && state.hasPendingApply
+
     /** 最近一次成功订阅超过 [MAX_PAYLOAD_AGE_MS] 时跳过条件请求头，防止 304 无限续期过期签名。 */
     fun shouldOmitIfNoneMatch(state: HubSubscriptionState, nowMs: Long): Boolean =
         state.hasSuccessfulSubscription && nowMs - state.lastSuccessAtMs >= MAX_PAYLOAD_AGE_MS

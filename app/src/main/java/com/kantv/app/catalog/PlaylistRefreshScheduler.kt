@@ -9,6 +9,7 @@ import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import com.kantv.app.playback.PlaybackActivityFlag
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.Mutex
@@ -36,8 +37,14 @@ object PlaylistRefreshScheduler {
         val subscriptions = repository.subscriptions()
         // 枢纽是首选来源：即使没有任何用户 M3U 订阅，也要按小时刷新服务端订阅。
         val hubConfigured = HubEndpointPolicy.validEndpoint(HubConfig.read(appContext).endpoint)
-        val hubDue = hubConfigured &&
-            HubRefreshPolicy.shouldRefresh(HubWiring.store(appContext).state(), System.currentTimeMillis())
+        val nowMs = System.currentTimeMillis()
+        val hubState = HubWiring.store(appContext).state()
+        // 播放中缓存的订阅在进程重启后不会自己落到目录。前台回来且已经不在播放时，
+        // 即使还没到小时间隔，也排一次补应用；真正应用时 Worker 会再看播放标志。
+        val hubDue = hubConfigured && (
+            HubRefreshPolicy.shouldRefresh(hubState, nowMs) ||
+                HubRefreshPolicy.shouldApplyPending(hubState, PlaybackActivityFlag.isActive())
+            )
         if (subscriptions.isEmpty() && !hubConfigured) {
             // An embedded snapshot/local file is not an online subscription.
             workManager.cancelUniqueWork(PERIODIC_WORK_NAME)
@@ -61,7 +68,7 @@ object PlaylistRefreshScheduler {
             periodic,
         )
 
-        if (hubDue || PlaylistRefreshPolicy.shouldCatchUp(subscriptions, System.currentTimeMillis())) {
+        if (hubDue || PlaylistRefreshPolicy.shouldCatchUp(subscriptions, nowMs)) {
             workManager.enqueueUniqueWork(
                 CATCH_UP_WORK_NAME,
                 ExistingWorkPolicy.KEEP,
