@@ -62,12 +62,26 @@ data class EpgChannelSchedule(
 ) {
     fun window(atMs: Long): EpgProgrammeWindow {
         if (programmes.isEmpty()) return EpgProgrammeWindow(null, null, null)
-        val firstAfter = programmes.binarySearchBy(atMs) { it.startAtMs }
-            .let { if (it >= 0) it else -it - 1 }
-        val currentIndex = when {
-            firstAfter < programmes.size && atMs >= programmes[firstAfter].startAtMs && atMs < programmes[firstAfter].endAtMs -> firstAfter
-            firstAfter > 0 && atMs < programmes[firstAfter - 1].endAtMs -> firstAfter - 1
-            else -> -1
+        // Programmes are ordered by start. A later short overlap can already have
+        // ended while an earlier show is still on air, so scan back from the
+        // rightmost start that is not in the future.
+        var firstAfter = programmes.binarySearchBy(atMs) { it.startAtMs }
+        if (firstAfter < 0) {
+            firstAfter = -firstAfter - 1
+        } else {
+            while (firstAfter < programmes.size && programmes[firstAfter].startAtMs <= atMs) {
+                firstAfter++
+            }
+        }
+        var cursor = firstAfter - 1
+        var currentIndex = -1
+        while (cursor >= 0) {
+            val programme = programmes[cursor]
+            if (programme.startAtMs <= atMs && atMs < programme.endAtMs) {
+                currentIndex = cursor
+                break
+            }
+            cursor--
         }
         val previousIndex = if (currentIndex >= 0) currentIndex - 1 else firstAfter - 1
         val nextIndex = if (currentIndex >= 0) currentIndex + 1 else firstAfter
