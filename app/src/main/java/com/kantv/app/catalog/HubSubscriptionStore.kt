@@ -249,6 +249,7 @@ class HubSubscriptionStore(
         nowMs: Long,
         applied: Boolean,
         signedParamsFingerprint: String? = null,
+        preserveFreshness: Boolean = false,
     ): HubSubscriptionState {
         val previous = state()
         if (nowMs < previous.lastAttemptAtMs) return previous
@@ -260,7 +261,12 @@ class HubSubscriptionStore(
             // 尝试时钟只由 recordAttempt 推进。补应用的墙钟更晚，若写进 lastAttempt，
             // 会把已经在路上的那次刷新判成过期响应丢掉。
             lastAttemptAtMs = previous.lastAttemptAtMs.takeIf { it > 0L } ?: nowMs,
-            lastSuccessAtMs = nowMs,
+            // 补应用同一份正文时不把新鲜度拨到停播时刻，否则两小时强制重拉会被推迟。
+            lastSuccessAtMs = if (preserveFreshness && previous.lastSuccessAtMs > 0L) {
+                previous.lastSuccessAtMs
+            } else {
+                nowMs
+            },
             lastAppliedSeq = if (applied) seq else previous.lastAppliedSeq,
             lastAppliedEtag = if (applied) resolvedEtag else previous.lastAppliedEtag,
             status = HubSubscriptionStatus.SUCCESS,
