@@ -27,7 +27,7 @@ from urllib.parse import parse_qs, urlparse
 
 from app import __version__
 from app.net import _DeadlineReader, _TIMEOUT_EXCS
-from app.logutil import get_logger
+from app.logutil import get_logger, redact_access_message, redact_request_target, redact_text
 
 log = get_logger('http')
 
@@ -149,7 +149,9 @@ def _make_handler(output_dir, status_provider=None, hub_provider=None):
                     return
                 self._send(200, ctype, body)
             except Exception:  # noqa: BLE001 - 单请求异常不杀服务
-                log.error('HTTP 处理异常 %s\n%s', self.path, traceback.format_exc())
+                log.error('HTTP 处理异常 %s\n%s',
+                          redact_request_target(self.path or ''),
+                          redact_text(traceback.format_exc()))
                 try:
                     self._send(500, 'text/plain; charset=utf-8', b'internal error')
                 except Exception:  # noqa: BLE001
@@ -188,7 +190,9 @@ def _make_handler(output_dir, status_provider=None, hub_provider=None):
                 except OSError:
                     pass
             except Exception:  # noqa: BLE001
-                log.error('HTTP POST 处理异常 %s\n%s', self.path, traceback.format_exc())
+                log.error('HTTP POST 处理异常 %s\n%s',
+                          redact_request_target(self.path or ''),
+                          redact_text(traceback.format_exc()))
                 try:
                     self._send(500, 'text/plain; charset=utf-8', b'internal error')
                 except Exception:  # noqa: BLE001
@@ -265,7 +269,7 @@ def _make_handler(output_dir, status_provider=None, hub_provider=None):
                 self.wfile.write(body)
 
         def log_message(self, fmt, *args):
-            log.info('%s - %s', self.address_string(), fmt % args)
+            log.info('%s - %s', self.address_string(), redact_access_message(fmt % args))
 
     return Handler
 

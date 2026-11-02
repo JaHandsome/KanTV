@@ -92,3 +92,34 @@ def redact_text(value):
     if not text:
         return text
     return _URL_IN_TEXT.sub(lambda match: redact_url(match.group(0)), text)
+
+
+_REQUEST_TARGET = re.compile(
+    r'"((?:GET|HEAD|POST|PUT|DELETE|OPTIONS|PATCH)\s+)(\S+)',
+    re.IGNORECASE,
+)
+
+
+def redact_request_target(target):
+    """请求目标只保留 path。query 和 fragment 里可能有签名参数。"""
+    if not isinstance(target, str) or not target or any(ch in target for ch in '\r\n\x00'):
+        return _REDACTED_URL
+    stripped = target.strip()
+    if '://' in stripped:
+        return redact_url(stripped)
+    path = stripped.split('?', 1)[0].split('#', 1)[0]
+    if not path.startswith('/'):
+        return _REDACTED_URL
+    if len(path) > _MAX_LOG_PATH:
+        path = path[:_MAX_LOG_PATH] + '...'
+    return path
+
+
+def redact_access_message(message):
+    """访问日志整行：把引号里的 request-target 换成无 query 的 path。"""
+    text = message if isinstance(message, str) else str(message)
+
+    def replace(match):
+        return '"%s%s' % (match.group(1), redact_request_target(match.group(2)))
+
+    return _REQUEST_TARGET.sub(replace, text, count=1)
