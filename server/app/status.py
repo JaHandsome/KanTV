@@ -112,13 +112,17 @@ class StatusProvider(object):
 
     # ---------- 调度心跳 ----------
     def _tick_age(self):
-        """距上次调度 tick 的秒数；从未运行返回 None。"""
+        """距上次调度 tick 的秒数；从未运行返回 None。
+
+        last_tick_time 是单调钟读数。用同一只钟算年龄，墙上时钟回拨不会把
+        已停滞的调度报成刚刚心跳过。
+        """
         if self.scheduler is None:
             return None
         last = getattr(self.scheduler, 'last_tick_time', None)
         if not last:
             return None
-        return max(0.0, time.time() - last)
+        return max(0.0, time.monotonic() - last)
 
     def _max_tick_age(self):
         """心跳判活上限：5 x probe 周期（僵尸模式检测阈值，与 analysis #9 一致）。"""
@@ -140,7 +144,7 @@ class StatusProvider(object):
         if self.scheduler is not None:
             last_build = (getattr(self.scheduler, 'last_run', {}) or {}).get('rebuild', 0.0)
             if last_build:
-                build_age = max(0.0, time.time() - last_build)
+                build_age = max(0.0, time.monotonic() - last_build)
         return {'alive': alive, 'last_tick_age_s': age, 'last_build_age_s': build_age}
 
     # ---------- 数据聚合 ----------

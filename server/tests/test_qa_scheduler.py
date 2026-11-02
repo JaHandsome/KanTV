@@ -25,6 +25,7 @@ from app.builder import OutputBuilder       # noqa: E402
 from offline_fixtures import write_test_config, make_config  # noqa: E402
 from app.db import Database, utcnow         # noqa: E402
 from app.scheduler import TASK_ORDER, Scheduler  # noqa: E402
+from app.status import StatusProvider       # noqa: E402
 
 
 def make_root():
@@ -50,6 +51,9 @@ class FakeComponent(object):
 
     def build(self):
         return self.run()
+
+    def rebuild_lineups(self):
+        return None
 
 
 class TestSchedulerIsolation(unittest.TestCase):
@@ -127,6 +131,47 @@ class TestSchedulerIsolation(unittest.TestCase):
 
     def test_task_order_constant(self):
         self.assertEqual(TASK_ORDER, ['probe', 'verify', 'discovery', 'rebuild'])
+
+    def test_wall_clock_step_back_does_not_postpone_due_tasks(self):
+        """墙上时钟回拨不得推迟已到期的周期任务，心跳年龄也不得被夹成 0。"""
+        calls = []
+        self._wire(calls)
+        wall = [1_000_000.0]
+        mono = [10_000.0]
+        period = self.sched._period('probe')
+
+        def wall_now():
+            return wall[0]
+
+        def mono_now():
+            return mono[0]
+
+        with mock.patch('app.scheduler.time.time', side_effect=wall_now), \
+                mock.patch('app.scheduler.time.monotonic', side_effect=mono_now):
+            self.sched.tick()
+            self.assertIn('probe', calls)
+            calls.clear()
+            mono[0] += period
+            wall[0] -= 3600.0
+            code, data = StatusProvider(self.sched.cfg, self.sched.db, self.sched).healthz()
+            self.assertEqual(code, 200)
+            self.assertGreaterEqual(data['last_tick_age_s'], period - 1.0)
+            self.sched.tick()
+        self.assertIn('probe', calls)
+
+    def test_fresh_process_is_due_before_monotonic_reaches_period(self):
+        """刚启动时单调钟可以小于周期；从未跑过的任务仍要立刻到期。
+
+        清理水位写在 meta，继续用墙上时钟，不能改成开机单调钟。
+        """
+        calls = []
+        self._wire(calls)
+        wall = 200_000.0
+        with mock.patch('app.scheduler.time.time', return_value=wall), \
+                mock.patch('app.scheduler.time.monotonic', return_value=100.0):
+            self.sched.tick()
+        self.assertIn('probe', calls)
+        self.assertEqual(self.sched.db.get_meta('last_cleanup'), str(int(wall)))
 
 
 class TestAtomicBuildIntegrity(unittest.TestCase):
