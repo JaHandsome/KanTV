@@ -8,6 +8,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import java.util.Properties
 
 class EpgRepositoryTest {
     @get:Rule val temporaryFolder = TemporaryFolder()
@@ -96,6 +97,23 @@ class EpgRepositoryTest {
         assertEquals("fallback-etag", validatingClient.calls[1].second)
         assertEquals(2, validated.schedules.size)
         assertEquals(EpgSourceState.CACHE, validated.status.state)
+    }
+
+    @Test fun corruptCacheValidatorIsNotResent() = runTest {
+        val directory = temporaryFolder.newFolder()
+        val channel = EpgChannelRef("c1", "CCTV-1 综合", "CCTV 1")
+        repository(directory, FakeClient(mutableListOf(modified()))).load(listOf(channel), nowMs = 1_000)
+        val metadata = directory.walkTopDown().first { it.name == "guide.properties" }
+        val properties = Properties().apply { metadata.inputStream().use(::load) }
+        properties.setProperty("etag", "bad\r\nX-Injected: 1")
+        properties.setProperty("lastModified", "Wed, 21 Oct 2015 07:28:00 GMT\nX: 1")
+        metadata.outputStream().use { properties.store(it, null) }
+
+        val client = FakeClient(mutableListOf(modified()))
+        repository(directory, client).load(listOf(channel), forceRefresh = true, nowMs = 20_000)
+
+        assertEquals(null, client.calls.single().second)
+        assertEquals(null, client.calls.single().third)
     }
 
     private fun repository(

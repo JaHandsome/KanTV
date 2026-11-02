@@ -13,6 +13,7 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
 import java.util.zip.GZIPInputStream
+import javax.xml.XMLConstants
 import javax.xml.parsers.SAXParserFactory
 
 internal object XmlTvParser {
@@ -21,11 +22,14 @@ internal object XmlTvParser {
         buffered.mark(2)
         val gzip = buffered.read() == 0x1f && buffered.read() == 0x8b
         buffered.reset()
-        val decoded = BoundedInputStream(if (gzip) GZIPInputStream(buffered) else buffered, MAX_EXPANDED_BYTES)
+        val decoded = DoctypeRejectingInputStream(
+            BoundedInputStream(if (gzip) GZIPInputStream(buffered) else buffered, MAX_EXPANDED_BYTES),
+        )
 
         val factory = SAXParserFactory.newInstance().apply {
             isNamespaceAware = false
             isValidating = false
+            setFeatureSafely(XMLConstants.FEATURE_SECURE_PROCESSING, true)
             setFeatureSafely("http://xml.org/sax/features/external-general-entities", false)
             setFeatureSafely("http://xml.org/sax/features/external-parameter-entities", false)
             setFeatureSafely("http://apache.org/xml/features/nonvalidating/load-external-dtd", false)
@@ -142,6 +146,59 @@ internal object XmlTvParser {
     }
 
     private const val MAX_TEXT_CHARS = 32 * 1024
+
+    /**
+     * [setFeatureSafely] swallows a parser that rejects `disallow-doctype-decl`.
+     * Internal entity expansion never calls [Handler.resolveEntity], so a DOCTYPE
+     * that gets through can still expand. XMLTV has no DTD; reject the declaration
+     * itself while the bytes are read.
+     */
+    private class DoctypeRejectingInputStream(
+        private val delegate: InputStream,
+    ) : InputStream() {
+        private var matched = 0
+
+        override fun read(): Int {
+            val value = delegate.read()
+            if (value >= 0) observe(value)
+            return value
+        }
+
+        override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
+            val count = delegate.read(buffer, offset, length)
+            if (count > 0) {
+                for (index in offset until offset + count) observe(buffer[index].toInt() and 0xFF)
+            }
+            return count
+        }
+
+        override fun close() = delegate.close()
+
+        private fun observe(value: Int) {
+            if (matched == 0) {
+                if (value == '<'.code) matched = 1
+                return
+            }
+            if (matched == 1) {
+                matched = when (value) {
+                    '!'.code -> 2
+                    '<'.code -> 1
+                    else -> 0
+                }
+                return
+            }
+            val expected = DOCTYPE[matched - 2]
+            val folded = if (value in 'A'.code..'Z'.code) value + 32 else value
+            if (folded == expected.code) {
+                matched++
+                if (matched == 2 + DOCTYPE.length) throw IOException("XMLTV doctype is not allowed")
+                return
+            }
+            matched = if (value == '<'.code) 1 else 0
+        }
+    }
+
+    private const val DOCTYPE = "doctype"
 
     private class BoundedInputStream(
         private val delegate: InputStream,

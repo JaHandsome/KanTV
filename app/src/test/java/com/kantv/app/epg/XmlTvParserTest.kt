@@ -63,6 +63,23 @@ class XmlTvParserTest {
         }
     }
 
+    @Test fun rejectsDoctypeWithInternalEntities() {
+        val xml = """<?xml version="1.0"?><!DOCTYPE tv [<!ENTITY x "nope">]><tv>&x;</tv>"""
+        assertThrows(Exception::class.java) {
+            XmlTvParser.parse(xml.byteInputStream(), emptyList())
+        }
+    }
+
+    @Test fun rejectsGzippedDoctype() {
+        val xml = """<!DOCTYPE tv [<!ENTITY x "nope">]><tv/>""".toByteArray()
+        val compressed = ByteArrayOutputStream().also { output ->
+            GZIPOutputStream(output).use { it.write(xml) }
+        }.toByteArray()
+        assertThrows(Exception::class.java) {
+            XmlTvParser.parse(ByteArrayInputStream(compressed), emptyList())
+        }
+    }
+
     @Test fun supportsChannelsInterleavedWithTheirProgrammes() {
         val input = """<tv>
           <channel id="one"><display-name>One</display-name></channel>
