@@ -155,6 +155,24 @@ class TestQualitySuffixCleaning(unittest.TestCase):
         self.assertEqual(self.p.normalize_channel('湖南卫视超清'), '湖南卫视')
         self.assertEqual(self.p.normalize_channel('湖南卫视超清高清双语'), '')
 
+    def test_match_tables_follow_replaced_channel_and_alias_objects(self):
+        """热加载和测试都是换成新 list/dict。缓存必须跟着新对象走。"""
+        cfg = self.p.cfg
+        self.assertEqual(self.p.normalize_channel('CCTV-5'), 'CCTV5')
+        cfg.channels['channels'] = [c for c in cfg.channels['channels'] if c != 'CCTV5']
+        self.assertEqual(self.p.normalize_channel('CCTV-5'), '')
+
+        aliases = dict(cfg.channels.get('aliases') or {})
+        aliases['唯一探针台'] = 'CCTV1'
+        cfg.channels['aliases'] = aliases
+        self.assertEqual(self.p.normalize_channel('唯一探针台'), 'CCTV1')
+        self.assertEqual(self.p.normalize_channel('唯一探针台高清'), 'CCTV1')
+        replaced = dict(aliases)
+        del replaced['唯一探针台']
+        cfg.channels['aliases'] = replaced
+        self.assertEqual(self.p.normalize_channel('唯一探针台'), '')
+        self.assertEqual(self.p.normalize_channel('唯一探针台高清'), '')
+
 
 class TestUrlNormalize(unittest.TestCase):
     def test_hash_host_case(self):
