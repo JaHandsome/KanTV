@@ -8,6 +8,7 @@ P0 收口新增：
 - AES-128 加密 HLS fixture（AC-1.1）+ 末分片失败回退首分片必须改用 keys[0]（§8-⑧）；
 - R2 scheme 前置拦截（AC-2.1/2.5）；R4 能力门禁 + 只读重判（AC-4.x）；R3 签名 403（AC-3.6）。
 """
+import contextlib
 import os
 import shutil
 import ssl
@@ -848,6 +849,61 @@ class TestBatchCircuitBreaker(unittest.TestCase):
         self.assertFalse(Verifier._should_circuit_open(
             [r('URLError'), r('OSError'), r('NetPolicyError')]))
         self.assertFalse(Verifier._should_circuit_open([r(''), r(''), r('')]))
+
+    def _spy_transactions(self):
+        calls = []
+        real = self.db.transaction
+
+        @contextlib.contextmanager
+        def wrapped():
+            calls.append(1)
+            with real() as conn:
+                yield conn
+
+        self.db.transaction = wrapped
+        return calls
+
+    def test_verify_round_writes_the_batch_in_one_transaction(self):
+        """非熔断轮把整批 verifications 和 sources 更新放进同一次提交。"""
+        urls = ['http://x/batch-ok-%d.m3u8' % i for i in range(2)]
+        sids = [_insert(self.db, u) for u in urls]
+        calls = self._spy_transactions()
+        ok = {'alive': True, 'av': 'video(TS:H.264视频)', 'container': 'hls'}
+        with mock.patch.object(verifier_module, 'probe', return_value=ok):
+            res = self._run({})
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(res['ok'], 2)
+        self.assertIs(res['circuit_open'], False)
+        self.assertEqual(self._verifications(), 2)
+        for sid in sids:
+            self.assertEqual(self._source(sid)['status'], 'active')
+
+    def test_verify_round_isolates_one_failed_record(self):
+        """单条落库失败只回滚该条；同批另一条的验证记录和状态保留。"""
+        good = _insert(self.db, 'http://x/iso-good.m3u8')
+        bad = _insert(self.db, 'http://x/iso-bad.m3u8')
+        calls = self._spy_transactions()
+        real = Verifier._apply_record
+
+        def apply(verifier, conn, source, result, duration_ms):
+            verdict = real(verifier, conn, source, result, duration_ms)
+            if source['id'] == bad:
+                raise RuntimeError('record failed')
+            return verdict
+
+        ok = {'alive': True, 'av': 'video(TS:H.264视频)', 'container': 'hls'}
+        with mock.patch.object(Verifier, '_apply_record', apply):
+            with mock.patch.object(verifier_module, 'probe', return_value=ok):
+                res = self._run({})
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(res['ok'], 1)
+        self.assertEqual(self._source(good)['status'], 'active')
+        self.assertEqual(self._source(bad)['status'], 'candidate')
+        self.assertIsNone(self._source(bad)['last_verified'])
+        self.assertEqual(self.db.query_one(
+            'SELECT COUNT(*) AS c FROM verifications WHERE source_id=?', (good,))['c'], 1)
+        self.assertEqual(self.db.query_one(
+            'SELECT COUNT(*) AS c FROM verifications WHERE source_id=?', (bad,))['c'], 0)
 
 
 class TestRecordSixClass(unittest.TestCase):
