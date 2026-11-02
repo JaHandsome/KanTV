@@ -80,6 +80,22 @@ class XmlTvParserTest {
         }
     }
 
+    @Test fun keepsProgrammesThatArriveBeforeTheirChannel() {
+        val input = """<tv>
+          <programme channel="one" start="20260909060000 +0800" stop="20260909070000 +0800"><title>A</title><category>新闻</category></programme>
+          <programme channel="two" start="20260909060000 +0800" stop="20260909070000 +0800"><title>Skip</title></programme>
+          <channel id="one"><display-name>One</display-name></channel>
+          <channel id="two"><display-name>Unrequested</display-name></channel>
+          <programme channel="one" start="20260909070000 +0800" stop="20260909080000 +0800"><title>B</title></programme>
+          <programme channel="two" start="20260909080000 +0800" stop="20260909090000 +0800"><title>Still skipped</title></programme>
+        </tv>"""
+        val result = XmlTvParser.parse(input.byteInputStream(), listOf(EpgChannelRef("1", "one", "One")))
+        val schedule = result.getValue("1")
+        assertEquals(listOf("A", "B"), schedule.programmes.map { it.title })
+        assertEquals(listOf("新闻"), schedule.programmes.first().categories)
+        assertEquals(setOf("1"), result.keys)
+    }
+
     @Test fun supportsChannelsInterleavedWithTheirProgrammes() {
         val input = """<tv>
           <channel id="one"><display-name>One</display-name></channel>
