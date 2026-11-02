@@ -22,7 +22,7 @@ import re
 import time
 
 from app.db import COLLISION_ORPHAN_STATUS, delivery_profile, utcnow
-from app.logutil import get_logger, redact_text, redact_url
+from app.logutil import get_logger, redact_exc, redact_url
 from app.parser import ChannelParser
 
 log = get_logger('discovery')
@@ -104,7 +104,7 @@ class SeedProvider(object):
             with open(path, 'r', encoding='utf-8') as f:
                 return json.load(f)
         except (ValueError, OSError, UnicodeDecodeError) as e:
-            log.error('种子文件解析失败: %s (%s)', path, e)
+            log.error('种子文件解析失败: %s (%s)', path, redact_exc(e))
             return None
 
     def entries(self):
@@ -189,7 +189,7 @@ class RepoProvider(object):
                 body = self.net.fetch_retry(url, limit=limit)
                 return body.decode('utf-8', 'ignore'), url
             except Exception as e:  # noqa: BLE001 - 单仓失败只记日志不中断
-                log.error('仓库拉取失败 %s (%s): %s', row['repo'], redact_url(url), redact_text(e))
+                log.error('仓库拉取失败 %s (%s): %s', row['repo'], redact_url(url), redact_exc(e))
         return None, None
 
     def collect(self):
@@ -209,7 +209,7 @@ class RepoProvider(object):
                 log.info('仓库 %s@%s/%s: 解析 %d 条',
                          row['repo'], row['branch'], row['path'], len(entries))
             except Exception as e:  # noqa: BLE001 - 单仓异常不杀整轮
-                log.error('仓库 %s 处理异常: %s', row['repo'], e)
+                log.error('仓库 %s 处理异常: %s', row['repo'], redact_exc(e))
         return out
 
 
@@ -244,7 +244,7 @@ class RepoMinerProvider(object):
             _st, body, _ct = self.net.fetch(url, limit=524288)
             return body.decode('utf-8', 'ignore')
         except Exception as e:  # noqa: BLE001 - 单个 README 失败不中断
-            log.info('挖矿: README 拉取跳过 %s (%s)', repo, redact_text(e)[:120])
+            log.info('挖矿: README 拉取跳过 %s (%s)', repo, redact_exc(e)[:120])
             return None
 
     # ---------- 候选提取 ----------
@@ -300,7 +300,7 @@ class RepoMinerProvider(object):
                     out.extend((branch, n) for n in cands)
                     break
             except Exception as e:  # noqa: BLE001 - 分支探测失败尝试下一分支
-                log.info('挖矿: 主页展开失败 %s@%s (%s)', repo, branch, redact_text(e)[:120])
+                log.info('挖矿: 主页展开失败 %s@%s (%s)', repo, branch, redact_exc(e)[:120])
         return out
 
     # ---------- 校验 ----------
@@ -314,7 +314,7 @@ class RepoMinerProvider(object):
             entries = parse_playlist(self.parser, text, path)
             return len(entries) >= 3, len(entries)
         except Exception as e:  # noqa: BLE001 - 校验失败即丢弃该候选
-            log.info('挖矿: 候选校验失败 %s@%s/%s (%s)', repo, branch, path, redact_text(e)[:120])
+            log.info('挖矿: 候选校验失败 %s@%s/%s (%s)', repo, branch, path, redact_exc(e)[:120])
             return False, 0
 
     # ---------- 主流程 ----------
@@ -422,7 +422,7 @@ class UrlListProvider(object):
                                         limit=self._fetch_limit())
             return body.decode('utf-8', 'ignore')
         except Exception as e:  # noqa: BLE001 - 单清单失败只记日志
-            log.error('URL 清单拉取失败 %s (%s): %s', item.get('id'), redact_url(str(url)), redact_text(e))
+            log.error('URL 清单拉取失败 %s (%s): %s', item.get('id'), redact_url(str(url)), redact_exc(e))
             return None
 
     def _entries(self, item, text):
@@ -774,7 +774,7 @@ class SourceDiscovery(object):
             if added:
                 stats['repos_added'] = added
         except Exception as e:  # noqa: BLE001 - 挖矿异常不影响仓库通道
-            log.error('挖矿通道异常: %s', e)
+            log.error('挖矿通道异常: %s', redact_exc(e))
 
         # 仓库通道
         for origin, entries in RepoProvider(self.cfg, self.db, self.net, self.parser).collect():
@@ -786,7 +786,7 @@ class SourceDiscovery(object):
                 stats['blocked'] += b
                 log.info('通道 %s: 新增 %d, 重复 %d, 黑名单 %d', origin, n, d, b)
             except Exception as e:  # noqa: BLE001 - 单通道入库异常不杀整轮
-                log.error('通道 %s 入库异常: %s', origin, e)
+                log.error('通道 %s 入库异常: %s', origin, redact_exc(e))
 
         # 任意 URL 清单通道（HK MPD 路线；enabled 默认 false -> 零网络调用）
         try:
@@ -799,9 +799,9 @@ class SourceDiscovery(object):
                     stats['blocked'] += b
                     log.info('通道 %s: 新增 %d, 重复 %d, 黑名单 %d', origin, n, d, b)
                 except Exception as e:  # noqa: BLE001 - 单通道入库异常不杀整轮
-                    log.error('通道 %s 入库异常: %s', origin, e)
+                    log.error('通道 %s 入库异常: %s', origin, redact_exc(e))
         except Exception as e:  # noqa: BLE001 - URL 清单通道异常不影响主流程
-            log.error('URL 清单通道异常: %s', e)
+            log.error('URL 清单通道异常: %s', redact_exc(e))
 
         log.info('源发现完成: %s', stats)
         return stats

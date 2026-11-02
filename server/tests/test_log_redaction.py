@@ -8,7 +8,9 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
-from app.logutil import redact_access_message, redact_request_target, redact_text, redact_url  # noqa: E402
+from app.logutil import (  # noqa: E402
+    redact_access_message, redact_exc, redact_request_target, redact_text, redact_url,
+)
 from app.net import NetPolicyError, _validate_url  # noqa: E402
 
 SECRET = 's3cret-token'
@@ -112,6 +114,156 @@ class TestRedactUrl(unittest.TestCase):
         self.assertIn('/live.txt', joined)
         self.assertNotIn(SECRET, joined)
         self.assertNotIn('token=', joined)
+
+    def test_exception_text_drops_redirect_token_stream_url_and_newlines(self):
+        import urllib.error
+        secret_url = 'http://cdn.example/live.m3u8?token=%s&expires=1' % SECRET
+        err = urllib.error.HTTPError(
+            secret_url, 302,
+            "Found - Redirection to url '%s' is not allowed" % secret_url,
+            None, None)
+        safe = redact_exc(err)
+        self.assertIn('http://cdn.example/live.m3u8', safe)
+        self.assertNotIn(SECRET, safe)
+        self.assertNotIn('token=', safe)
+        self.assertNotIn('?', safe)
+        stream = redact_exc("probe failed\r\nrtmp://edge.example/live?sign=%s" % SECRET)
+        self.assertEqual(stream, 'probe failed  rtmp://edge.example/live')
+        self.assertNotIn('\n', redact_exc('a\nb'))
+        self.assertNotIn(SECRET, stream)
+
+    def test_probe_verify_discovery_and_status_history_drop_redirect_token(self):
+        import logging
+        import shutil
+        import tempfile
+        import urllib.error
+        from unittest import mock
+        from app.config import Config
+        from app.db import Database, utcnow
+        from app.discovery import RepoProvider
+        from app.health import HealthMonitor
+        from app.scheduler import Scheduler
+        from app.verifier import Verifier
+        from offline_fixtures import write_test_config
+
+        secret_url = 'http://cdn.example/live.m3u8?token=%s&expires=1' % SECRET
+        err = urllib.error.HTTPError(
+            secret_url, 302,
+            "Found - Redirection to url '%s' is not allowed\nFORGED-LINE" % secret_url,
+            None, None)
+
+        def capture(logger_name, fn):
+            records = []
+
+            class Capture(logging.Handler):
+                def emit(self, record):
+                    records.append(record.getMessage())
+
+            logger = logging.getLogger(logger_name)
+            handler = Capture()
+            previous = logger.level
+            logger.addHandler(handler)
+            logger.setLevel(logging.INFO)
+            try:
+                return fn(), '\n'.join(records)
+            finally:
+                logger.removeHandler(handler)
+                logger.setLevel(previous)
+
+        tmp = tempfile.mkdtemp(prefix='iptv-redact-exc-')
+        try:
+            write_test_config(tmp)
+            cfg = Config(tmp)
+            cfg.settings['paths']['db'] = os.path.join(tmp, 'test.db')
+            cfg.settings['limits']['net_concurrency'] = 2
+            cfg.settings['limits']['verify_batch'] = 4
+            db = Database(cfg.db_path)
+            db.migrate()
+            try:
+                now = utcnow()
+                db.execute(
+                    "INSERT INTO sources(url, url_hash, channel_name, channel_key, origin,"
+                    " status, av, score, first_seen, last_seen) VALUES (?,?,?,?,?,?,?,?,?,?)",
+                    ('http://x/alive', 'http://x/alive', 'CCTV1', 'CCTV1', 'test',
+                     'active', 'video', 10, now, now))
+
+                class BoomHealth(HealthMonitor):
+                    def probe_alive(self, url, ua=None):
+                        raise err
+
+                _, health_log = capture(
+                    'health', lambda: BoomHealth(cfg, db, _IdleNet()).run())
+                self.assertIn('探活任务异常', health_log)
+                self.assertIn('FORGED-LINE', health_log)
+                self.assertNotIn('\nFORGED-LINE', health_log)
+                self._assert_secret_gone(health_log)
+
+                db.execute(
+                    "INSERT INTO sources(url, url_hash, channel_name, channel_key, origin,"
+                    " status, av, score, first_seen, last_seen) VALUES (?,?,?,?,?,?,?,?,?,?)",
+                    ('http://x/cand', 'http://x/cand', 'CCTV1', 'CCTV1', 'test',
+                     'candidate', None, 10, now, now))
+
+                def verify():
+                    with mock.patch('app.verifier.probe', side_effect=err):
+                        return Verifier(cfg, db, _IdleNet()).run()
+
+                _, verify_log = capture('verifier', verify)
+                self.assertIn('验证探测异常', verify_log)
+                self._assert_secret_gone(verify_log)
+
+                db.execute(
+                    'INSERT INTO repos(repo, branch, path, channel, enabled) '
+                    'VALUES (?,?,?,?,1)',
+                    ('example/list', 'main', 'a.m3u', 'jsdelivr'))
+
+                class ListNet(_IdleNet):
+                    def fetch_retry(self, url, limit=None, ua=None):
+                        return b'#EXTM3U\n'
+
+                    def jsdelivr_url(self, repo, branch, path):
+                        return 'https://cdn.example/list.m3u'
+
+                    ghproxy_url = jsdelivr_url
+
+                def discover():
+                    with mock.patch('app.discovery.parse_playlist', side_effect=err):
+                        return RepoProvider(cfg, db, ListNet()).collect()
+
+                _, discovery_log = capture('discovery', discover)
+                self.assertIn('仓库 example/list 处理异常', discovery_log)
+                self._assert_secret_gone(discovery_log)
+            finally:
+                db.close()
+
+            sched = Scheduler(tmp)
+            try:
+                def fail_task():
+                    raise err
+
+                _, sched_log = capture('scheduler', lambda: sched._run_task('probe', fail_task))
+                self.assertIn('任务 probe 异常', sched_log)
+                self._assert_secret_gone(sched_log)
+                detail = sched.history[-1]['detail']
+                self.assertIn('异常:', detail)
+                self._assert_secret_gone(detail)
+                self.assertNotIn('\n', detail)
+            finally:
+                sched.db.close()
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+    def _assert_secret_gone(self, text):
+        self.assertNotIn(SECRET, text)
+        self.assertNotIn('token=', text)
+
+
+class _IdleNet(object):
+    ua = 'test-ua'
+
+    @staticmethod
+    def enc(url):
+        return url
 
 
 if __name__ == '__main__':

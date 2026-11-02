@@ -20,7 +20,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from urllib.parse import urljoin
 
 from app.db import utcnow
-from app.logutil import get_logger, redact_url
+from app.logutil import get_logger, redact_exc, redact_url
 from app.net import NetBodyLimitError
 from app.throughput import (THROUGHPUT_FAIL_RATIO, THROUGHPUT_REALTIME_RATIO,
                             is_transport_reason, throughput_window_factor)
@@ -327,7 +327,7 @@ class HealthMonitor(object):
                 try:
                     res = f.result()
                 except Exception as e:  # noqa: BLE001 - 单源异常不杀整轮
-                    log.error('吞吐探测任务异常 source=%s: %s', row['id'], e)
+                    log.error('吞吐探测任务异常 source=%s: %s', row['id'], redact_exc(e))
                     fail_count += 1
                     continue
                 results.append((row['id'],) + res)
@@ -339,7 +339,7 @@ class HealthMonitor(object):
                     'download_ms, ratio, ok, reason) VALUES (?,?,?,?,?,?,?)',
                     (sid, now, seg_ms, dl_ms, ratio, ok, reason))
             except Exception as e:  # noqa: BLE001
-                log.error('吞吐结果写入异常 source=%s: %s', sid, e)
+                log.error('吞吐结果写入异常 source=%s: %s', sid, redact_exc(e))
                 continue
             if ok:
                 ok_count += 1
@@ -464,7 +464,7 @@ class HealthMonitor(object):
                 try:
                     results.append(f.result())
                 except Exception as e:  # noqa: BLE001 - 单源异常不杀整轮
-                    log.error('探活任务异常: %s', e)
+                    log.error('探活任务异常: %s', redact_exc(e))
                     continue
 
         if self._should_circuit_open(results):
@@ -475,7 +475,7 @@ class HealthMonitor(object):
                 try:
                     self._record_check(row['id'], alive, latency, reason)
                 except Exception as e:  # noqa: BLE001
-                    log.error('熔断结果写入异常 source=%s: %s', row['id'], e)
+                    log.error('熔断结果写入异常 source=%s: %s', row['id'], redact_exc(e))
                     continue
                 if alive:
                     stats['alive'] += 1
@@ -489,7 +489,7 @@ class HealthMonitor(object):
             try:
                 self.on_check(row, alive, latency, reason)
             except Exception as e:  # noqa: BLE001
-                log.error('探活结果处理异常 source=%s: %s', row['id'], e)
+                log.error('探活结果处理异常 source=%s: %s', row['id'], redact_exc(e))
                 continue
             if alive:
                 stats['alive'] += 1
@@ -503,7 +503,7 @@ class HealthMonitor(object):
             try:
                 self._run_throughput_round(rnd)
             except Exception as e:  # noqa: BLE001 - 吞吐失败不影响本轮线路重排
-                log.error('吞吐探测轮 %d 异常: %s', rnd, e)
+                log.error('吞吐探测轮 %d 异常: %s', rnd, redact_exc(e))
         self.rebuild_lineups()
         stats['circuit_open'] = False
         log.info('探活轮 %d 完成: %s', rnd, stats)

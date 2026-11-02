@@ -30,7 +30,7 @@ import threading
 from app import schema
 from app.config import DEFAULT_SETTINGS
 from app.dbbackup import _quick_check_ok, _readonly_uri, _remove_quiet, online_backup
-from app.logutil import get_logger
+from app.logutil import get_logger, redact_exc
 # 兼容 re-export：迁移 DDL / 钩子迁至 app.schema 后，旧 import 路径保持可用
 # （测试与 tools 大量 from app.db import DDL_*/_apply_ddl_v5/_post_migrate_v5 等）。
 from app.schema import (COLLISION_ORPHAN_STATUS, DDL_V1, DDL_V2, DDL_V3, DDL_V4,
@@ -288,7 +288,7 @@ class Database(object):
                      c1, c1b, c2, c3, c4, c5, c6, c7, retention_days, checks_retention_days,
                      dead_days, orphan_days)
         except sqlite3.Error as e:
-            log.error('cleanup 失败: %s', e)
+            log.error('cleanup 失败: %s', redact_exc(e))
 
     def _table_exists(self, name):
         """sqlite_master 判表存在（v7 新增表的清理守卫；name 为内部常量，无注入面）。"""

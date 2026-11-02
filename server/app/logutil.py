@@ -56,7 +56,10 @@ def get_logger(name):
 
 _REDACTED_URL = '<redacted-url>'
 _MAX_LOG_PATH = 120
-_URL_IN_TEXT = re.compile(r'https?://[^\s\'\"<>]+', re.IGNORECASE)
+_URL_IN_TEXT = re.compile(
+    r'(?:https?|udp|rtp|rtsp|rtmp)://[^\s\'\"<>]+',
+    re.IGNORECASE,
+)
 
 
 def redact_url(url):
@@ -87,11 +90,21 @@ def redact_url(url):
 
 
 def redact_text(value):
-    """把文本里的 http(s) URL 换成 redact_url 的结果，再交给日志。"""
+    """把文本里的 http(s)/组播 URL 换成 redact_url 的结果，再交给日志。"""
     text = value if isinstance(value, str) else str(value)
     if not text:
         return text
     return _URL_IN_TEXT.sub(lambda match: redact_url(match.group(0)), text)
+
+
+def redact_exc(exc):
+    """单行日志里的异常：去掉 URL，并把换行压成空格。
+
+    urllib 拒绝跨协议跳转时，HTTPError 的说明文字带完整 Location
+    （含 query token）。直接 ``%s`` 插进日志或状态页历史会留下签名。
+    换行同样压平，避免一条异常伪造多行日志。
+    """
+    return redact_text(exc).replace('\r', ' ').replace('\n', ' ')
 
 
 _REQUEST_TARGET = re.compile(

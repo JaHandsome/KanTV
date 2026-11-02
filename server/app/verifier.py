@@ -26,7 +26,7 @@ from app.config import DEFAULT_RULES, DEFAULT_SETTINGS
 from app.db import DELIVERABLE_PROFILES, delivery_profile, iso_plus_hours, utcnow
 from app.throughput import (THROUGHPUT_FAIL_RATIO, THROUGHPUT_REALTIME_RATIO,
                             is_transport_reason, throughput_window_factor)
-from app.logutil import get_logger, redact_url
+from app.logutil import get_logger, redact_exc, redact_url
 from app.parser import ChannelParser
 
 log = get_logger('verifier')
@@ -1512,7 +1512,7 @@ class Verifier(object):
                     try:
                         row, result, dur = f.result()
                     except Exception as e:  # noqa: BLE001 - 单源探测异常不杀整轮
-                        log.error('验证探测异常: %s', e)
+                        log.error('验证探测异常: %s', redact_exc(e))
                         continue
                     results.append((row, result, dur))
                     if time.time() > deadline:
@@ -1538,7 +1538,7 @@ class Verifier(object):
             try:
                 verdict = self.record(row, result, dur)
             except Exception as e:  # noqa: BLE001 - 单条落库失败不中断
-                log.error('验证结果落库失败 source=%s: %s', row['id'], e)
+                log.error('验证结果落库失败 source=%s: %s', row['id'], redact_exc(e))
                 continue
             if verdict in stats:
                 stats[verdict] += 1

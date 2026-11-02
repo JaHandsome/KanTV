@@ -13,7 +13,7 @@ import re
 import threading
 from urllib.parse import urlsplit
 
-from app.logutil import get_logger
+from app.logutil import get_logger, redact_exc
 
 log = get_logger('config')
 
@@ -223,7 +223,7 @@ def _load_json(path, default):
             raise ValueError('配置根节点必须是 JSON 对象')
         return data
     except (ValueError, OSError, UnicodeDecodeError) as e:
-        log.error('配置文件解析失败, 使用默认值: %s (%s)', path, e)
+        log.error('配置文件解析失败, 使用默认值: %s (%s)', path, redact_exc(e))
         return copy.deepcopy(default)
 
 
@@ -299,7 +299,7 @@ class Config(object):
                 try:
                     _compile_private_source_origins(merged)
                 except ValueError as exc:
-                    log.error('配置热加载失败, 保留上一轮生效配置: %s (%s)', fname, exc)
+                    log.error('配置热加载失败, 保留上一轮生效配置: %s (%s)', fname, redact_exc(exc))
                     continue
             updates.append((attr, fname, merged))
         with self.lock:
