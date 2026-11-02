@@ -1,6 +1,7 @@
 package com.kantv.app.epg
 
 import com.kantv.app.util.Hashing
+import com.kantv.app.util.cacheValidator
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
@@ -232,8 +233,8 @@ class UrlConnectionEpgHttpClient(
             setRequestProperty("Accept", "application/xml, text/xml, application/gzip, */*")
             // XmlTvParser 按 magic bytes 识别 gzip 并自带解压上限；允许 gzip 可把 EPG 传输量压低一个量级。
             setRequestProperty("Accept-Encoding", "gzip")
-            etag?.let { setRequestProperty("If-None-Match", it) }
-            lastModified?.let { setRequestProperty("If-Modified-Since", it) }
+            cacheValidator(etag)?.let { setRequestProperty("If-None-Match", it) }
+            cacheValidator(lastModified)?.let { setRequestProperty("If-Modified-Since", it) }
         }
         return try {
             when (val status = connection.responseCode) {
@@ -255,8 +256,8 @@ class UrlConnectionEpgHttpClient(
                     }
                     EpgHttpResult.Modified(
                         output.toByteArray(),
-                        connection.getHeaderField("ETag"),
-                        connection.getHeaderField("Last-Modified"),
+                        cacheValidator(connection.getHeaderField("ETag")),
+                        cacheValidator(connection.getHeaderField("Last-Modified")),
                     )
                 }
                 else -> EpgHttpResult.Failed(EpgFailureCode.HTTP_STATUS)
@@ -309,8 +310,8 @@ private class EpgDiskCache(private val directory: File) {
         EpgCacheEntry(
             payload = payloadFile.readBytes(),
             lastSuccessAtMs = properties.getProperty("lastSuccessAtMs")?.toLongOrNull() ?: return null,
-            etag = properties.getProperty("etag")?.takeIf { it.isNotEmpty() },
-            lastModified = properties.getProperty("lastModified")?.takeIf { it.isNotEmpty() },
+            etag = cacheValidator(properties.getProperty("etag")),
+            lastModified = cacheValidator(properties.getProperty("lastModified")),
             sourceUrl = properties.getProperty("sourceUrl") ?: return null,
         )
     }.getOrNull()
@@ -322,8 +323,8 @@ private class EpgDiskCache(private val directory: File) {
         payloadTemp.outputStream().use { it.write(payload) }
         Properties().apply {
             setProperty("lastSuccessAtMs", lastSuccessAtMs.toString())
-            setProperty("etag", etag.orEmpty())
-            setProperty("lastModified", lastModified.orEmpty())
+            setProperty("etag", cacheValidator(etag).orEmpty())
+            setProperty("lastModified", cacheValidator(lastModified).orEmpty())
             setProperty("sourceUrl", sourceUrl)
         }.let { properties -> metadataTemp.outputStream().use { properties.store(it, null) } }
         if (!payloadTemp.renameTo(payloadFile)) throw IOException("cannot replace EPG payload cache")

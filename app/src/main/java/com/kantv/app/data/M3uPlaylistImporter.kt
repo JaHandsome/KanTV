@@ -182,7 +182,7 @@ private object M3uParser {
     private fun parseHeaderEpgUrls(header: String): List<String> {
         val attributes = parseAttributes(header.removePrefix("#EXTM3U"))
         return listOfNotNull(attributes["x-tvg-url"], attributes["url-tvg"])
-            .flatMap { it.split(Regex("[\\s,]+")) }
+            .flatMap { it.split(epgUrlSeparator) }
             .map { it.trim() }
             .filter { epgUrlAllowed(it) }
             .distinct()
@@ -254,10 +254,12 @@ private object M3uParser {
         return scheme in playableSchemes
     }
 
+    private val epgUrlSeparator = Regex("[\\s,]+")
+    private val attributePattern = Regex("""([A-Za-z0-9_-]+)=(?:\"((?:\\.|[^\"])*)\"|'((?:\\.|[^'])*)'|([^\\s,]+))""")
+
     private fun parseAttributes(text: String): Map<String, String> {
         val result = linkedMapOf<String, String>()
-        val pattern = Regex("""([A-Za-z0-9_-]+)=(?:\"((?:\\.|[^\"])*)\"|'((?:\\.|[^'])*)'|([^\\s,]+))""")
-        pattern.findAll(text).forEach { match ->
+        attributePattern.findAll(text).forEach { match ->
             val value = match.groups[2]?.value ?: match.groups[3]?.value ?: match.groups[4]?.value ?: ""
             result[match.groups[1]!!.value.lowercase(Locale.ROOT)] = value.replace("\\\"", "\"")
         }

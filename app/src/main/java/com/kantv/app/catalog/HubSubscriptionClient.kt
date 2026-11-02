@@ -1,5 +1,6 @@
 package com.kantv.app.catalog
 
+import com.kantv.app.util.cacheValidator
 import java.io.ByteArrayOutputStream
 import java.net.HttpURLConnection
 import java.net.Proxy
@@ -31,16 +32,17 @@ class HttpUrlConnectionHubTransport(
             readTimeout = readTimeoutMs
             setRequestProperty("Accept", "application/json")
             setRequestProperty("Accept-Encoding", "identity")
-            ifNoneMatch?.let { setRequestProperty("If-None-Match", it) }
+            cacheValidator(ifNoneMatch)?.let { setRequestProperty("If-None-Match", it) }
         }
         try {
             val code = connection.responseCode
+            val etag = cacheValidator(connection.getHeaderField("ETag"))
             if (code == HttpURLConnection.HTTP_NOT_MODIFIED) {
-                return HubHttpResponse(code, connection.getHeaderField("ETag"), connection.contentType)
+                return HubHttpResponse(code, etag, connection.contentType)
             }
             val length = connection.getHeaderField("Content-Length")?.toLongOrNull()
             if (length != null && length > MAX_PAYLOAD_BYTES) {
-                return HubHttpResponse(code, connection.getHeaderField("ETag"), connection.contentType)
+                return HubHttpResponse(code, etag, connection.contentType)
             }
             val body = if (code in 200..299) {
                 val output = ByteArrayOutputStream()
@@ -59,7 +61,7 @@ class HttpUrlConnectionHubTransport(
             } else {
                 null
             }
-            return HubHttpResponse(code, connection.getHeaderField("ETag"), connection.contentType, body)
+            return HubHttpResponse(code, etag, connection.contentType, body)
         } finally {
             connection.disconnect()
         }
@@ -101,7 +103,7 @@ class HubSubscriptionClient(
         if (!HubEndpointPolicy.validEndpoint(endpoint)) return HubFetchOutcome.Failed(HubSubscriptionStatus.ENDPOINT_INVALID)
         val uri = HubEndpointPolicy.subscriptionUri(endpoint, identity, caps)
         val response = try {
-            transport.get(uri, ifNoneMatch?.takeIf { it.isNotBlank() })
+            transport.get(uri, cacheValidator(ifNoneMatch))
         } catch (failure: Exception) {
             return HubFetchOutcome.Failed(HubSubscriptionStatus.from(failure))
         }
@@ -122,7 +124,7 @@ class HubSubscriptionClient(
             is HubParseOutcome.Parsed -> HubFetchOutcome.Fetched(
                 payload = payload,
                 subscription = parsed.subscription,
-                etag = response.etag?.takeIf { it.isNotBlank() },
+                etag = cacheValidator(response.etag),
                 skippedChannels = parsed.skippedChannels,
             )
         }
