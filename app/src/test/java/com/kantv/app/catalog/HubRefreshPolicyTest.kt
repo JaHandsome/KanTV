@@ -261,6 +261,30 @@ class HubRefreshPolicyTest {
         assertEquals("無線新聞台", ChannelIdentity.resolveChannelId("无线新闻", aliasCache.current()))
     }
 
+    @Test fun `deferred payload is applied when seq stays and the etag changes`() = runBlocking {
+        val updated = PAYLOAD.replace("token=B", "token=C")
+        val transport = FakeTransport(
+            HubHttpResponse(code = 200, etag = "\"v1\"", contentType = "application/json", body = PAYLOAD.toByteArray()),
+            HubHttpResponse(code = 200, etag = "\"v2\"", contentType = "application/json", body = updated.toByteArray()),
+        )
+        val sink = RecordingSink()
+        val store = HubSubscriptionStore(InMemoryHubSubscriptionPersistence())
+        val coordinator = coordinator(transport, sink, store)
+
+        assertTrue(coordinator.refresh(force = true, nowMs = 1_000L) is HubRefreshOutcome.Applied)
+        val deferred = coordinator.refresh(force = true, playbackActive = true, nowMs = 2_000L)
+        assertEquals(HubRefreshOutcome.Deferred(42L), deferred)
+        assertEquals(1, sink.applied.size)
+        assertEquals(42L, store.state().seq)
+        assertEquals(42L, store.state().lastAppliedSeq)
+        assertEquals("\"v2\"", store.state().etag)
+
+        val applied = coordinator.applyDeferredIfAny(nowMs = 3_000L)
+        assertTrue(applied is HubRefreshOutcome.Applied)
+        assertEquals("https://example.invalid/news.m3u8?sig=A&token=C", sink.applied.last().channels.single().routes.single().url)
+        assertNull(coordinator.applyDeferredIfAny(nowMs = 4_000L))
+    }
+
     @Test fun `invalid payload is treated as a failure and keeps the previous result`() = runBlocking {
         val transport = FakeTransport(
             HubHttpResponse(code = 200, etag = "\"bad\"", contentType = "application/json", body = "not json".toByteArray()),
