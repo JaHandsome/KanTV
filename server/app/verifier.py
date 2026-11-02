@@ -1366,8 +1366,11 @@ class Verifier(object):
         开关 settings.verify_quality_weak_enabled=False 时退回两层旧行为。
         """
         cache_cutoff = iso_plus_hours(-int(self.cfg.settings['verify_cache_hours']))
+        # 排序只需要频道和分数。候选池通常远大于 verify_batch，整行里的
+        # drm_key 留到入选后再取，避免每轮把未探测的密钥读进内存。
         rows = self.db.query(
-            "SELECT * FROM sources WHERE status='candidate' AND channel_key != '' "
+            "SELECT id, channel_key, score FROM sources WHERE status='candidate' "
+            "AND channel_key != '' "
             'AND (last_verified IS NULL OR last_verified < ?) '
             'AND (backoff_until IS NULL OR backoff_until < ?)',
             (cache_cutoff, utcnow()))
@@ -1389,7 +1392,17 @@ class Verifier(object):
 
         rows.sort(key=lambda r: (tier(r['channel_key']),
                                  -float(r['score'] or 0.0)))
-        return rows[:batch_size]
+        picked = [r['id'] for r in rows[:batch_size]]
+        if not picked:
+            return []
+        full = {}
+        for i in range(0, len(picked), 500):
+            chunk = picked[i:i + 500]
+            marks = ','.join('?' * len(chunk))
+            for row in self.db.query(
+                    'SELECT * FROM sources WHERE id IN (%s)' % marks, tuple(chunk)):
+                full[row['id']] = row
+        return [full[i] for i in picked if i in full]
 
     def _rule_blocked(self, url):
         """现行死源规则判定（与 discovery.apply_rules 同一语义：host 前缀/域名子串）。"""

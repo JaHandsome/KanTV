@@ -291,6 +291,7 @@ class HealthMonitor(object):
 
         一次取回再按频道截断。返回顺序跟 channels 清单（重复键只留第一次），
         与逐频道 LIMIT 后按清单拼接一致。limit<=0 不取目标。
+        探测只用 id/url/container，不读 drm_key 等其余列。
         """
         h = self.cfg.settings['health']
         extra = int(h.get('throughput_extra_candidates', 2))
@@ -302,7 +303,8 @@ class HealthMonitor(object):
             unique = list(dict.fromkeys(channels))
             marks = ','.join('?' * len(unique))
             rows = self.db.query(
-                'SELECT * FROM sources WHERE channel_key IN (%s) '
+                'SELECT id, channel_key, url, container FROM sources '
+                'WHERE channel_key IN (%s) '
                 "AND status='active' AND av LIKE 'video%%' AND container='hls' "
                 'ORDER BY channel_key, score DESC, id ASC' % marks,
                 tuple(unique))

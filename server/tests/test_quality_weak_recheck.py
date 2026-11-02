@@ -89,6 +89,28 @@ class TestQualityWeakPriority(_Base):
         make_deliverable_line(self.db, 'http://x/b3.m3u8', 'CHAN_B', 70, ratio=0.1)
         insert_source(self.db, 'http://x/b-cand.m3u8', key='CHAN_B', score=100)
 
+    def test_select_batch_loads_full_rows_only_for_the_slice(self):
+        """候选排序只读 id/频道/分数；drm 整行只取本轮名额。"""
+        self._setup_quality_weak_vs_healthy()
+        calls = []
+        real = self.db.query
+
+        def wrapped(sql, params=()):
+            calls.append(sql)
+            return real(sql, params)
+
+        self.db.query = wrapped
+        batch = self.v._select_batch(1)
+        self.assertEqual(batch[0]['url'], 'http://x/a-cand.m3u8')
+        self.assertIn('drm', batch[0])
+        scans = [q for q in calls if "status='candidate'" in q]
+        self.assertEqual(len(scans), 1)
+        self.assertIn('SELECT id, channel_key, score', scans[0])
+        self.assertNotIn('drm_key', scans[0])
+        full = [q for q in calls if 'WHERE id IN' in q]
+        self.assertEqual(len(full), 1)
+        self.assertIn('SELECT *', full[0])
+
     def test_quality_weak_beats_healthy(self):
         self._setup_quality_weak_vs_healthy()
         batch = self.v._select_batch(1)
