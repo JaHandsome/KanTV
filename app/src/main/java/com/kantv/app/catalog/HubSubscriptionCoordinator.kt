@@ -135,7 +135,15 @@ class HubSubscriptionCoordinator(
             store.recordFailure(HubSubscriptionStatus.SCHEMA_UNSUPPORTED, nowMs)
             return HubRefreshOutcome.SchemaUnsupported(parsed.subscription.hubSchema)
         }
-        return applyDecision(parsed.subscription, payload, state.etag, parsed.subscription.seq, nowMs, countCatalog = true)
+        return applyDecision(
+            parsed.subscription,
+            payload,
+            state.etag,
+            parsed.subscription.seq,
+            nowMs,
+            countCatalog = true,
+            preserveFreshness = true,
+        )
     }
 
     private sealed interface Prefetch {
@@ -197,12 +205,14 @@ class HubSubscriptionCoordinator(
         seq: Long,
         nowMs: Long,
         countCatalog: Boolean,
+        preserveFreshness: Boolean = false,
     ): HubRefreshOutcome {
         noteFingerprintChange(subscription)
         val result = sink.applyHubSubscription(subscription, nowMs)
         aliasCache?.replace(subscription.aliasTable())
         store.recordSuccess(payload, etag, seq, nowMs, applied = countCatalog,
-            signedParamsFingerprint = subscription.signedParams?.fingerprint)
+            signedParamsFingerprint = subscription.signedParams?.fingerprint,
+            preserveFreshness = preserveFreshness)
         return when (result) {
             is CatalogImportResult.Imported -> HubRefreshOutcome.Applied(seq, result.channelCount, result.sourceCount)
             // 空清单同样视为成功（服务端可能只投递 unsupported_for_client）。

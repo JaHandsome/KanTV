@@ -535,6 +535,32 @@ class HubRefreshPolicyTest {
         assertFalse(store.state().hasPendingApply)
     }
 
+    @Test fun `deferred apply does not restart the payload freshness clock`() = runBlocking {
+        val updated = PAYLOAD.replace("token=B", "token=C")
+        val transport = FakeTransport(
+            HubHttpResponse(code = 200, etag = "\"v1\"", contentType = "application/json", body = PAYLOAD.toByteArray()),
+            HubHttpResponse(code = 200, etag = "\"v2\"", contentType = "application/json", body = updated.toByteArray()),
+        )
+        val store = HubSubscriptionStore(InMemoryHubSubscriptionPersistence())
+        val coordinator = coordinator(transport, RecordingSink(), store)
+        val fetchedAt = 2_000L
+        val applyAt = fetchedAt + 90 * 60 * 1_000L
+
+        assertTrue(coordinator.refresh(force = true, nowMs = 1_000L) is HubRefreshOutcome.Applied)
+        assertEquals(
+            HubRefreshOutcome.Deferred(42L),
+            coordinator.refresh(force = true, playbackActive = { true }, nowMs = fetchedAt),
+        )
+        assertTrue(coordinator.applyDeferredIfAny(nowMs = applyAt) is HubRefreshOutcome.Applied)
+
+        val state = store.state()
+        assertEquals(fetchedAt, state.lastSuccessAtMs)
+        assertEquals("\"v2\"", state.lastAppliedEtag)
+        assertFalse(state.hasPendingApply)
+        assertFalse(HubRefreshPolicy.shouldOmitIfNoneMatch(state, fetchedAt + HubRefreshPolicy.MAX_PAYLOAD_AGE_MS - 1))
+        assertTrue(HubRefreshPolicy.shouldOmitIfNoneMatch(state, fetchedAt + HubRefreshPolicy.MAX_PAYLOAD_AGE_MS))
+    }
+
     @Test fun `not due refresh never touches the network`() = runBlocking {
         val transport = FakeTransport()
         val store = HubSubscriptionStore(InMemoryHubSubscriptionPersistence())
