@@ -28,26 +28,41 @@ object ChannelDirectory {
 
     fun category(channel: ChannelEntity): String = category(channel.name, channel.groupTitle)
 
-    fun ordered(channels: List<ChannelEntity>): List<ChannelEntity> = channels.sortedWith(
-        compareBy<ChannelEntity> { categories.indexOf(category(it)) }
-            .thenBy { cctvOrder(it.name) }
-            .thenBy { it.position },
-    )
+    fun ordered(channels: List<ChannelEntity>): List<ChannelEntity> =
+        channels.map { channel ->
+            ChannelSortKey(
+                channel = channel,
+                categoryIndex = categories.indexOf(category(channel)),
+                cctv = cctvOrder(channel.name),
+            )
+        }.sortedWith(compareBy({ it.categoryIndex }, { it.cctv }, { it.channel.position }))
+            .map { it.channel }
 
     private fun cctvOrder(name: String): Int {
-        val match = Regex("^CCTV[- ]?(\\d+)(\\+)?", RegexOption.IGNORE_CASE).find(name) ?: return Int.MAX_VALUE
+        val match = CCTV_NUMBER.find(name) ?: return Int.MAX_VALUE
         return match.groupValues[1].toInt() * 2 + if (match.groupValues[2] == "+") 1 else 0
     }
 
     private fun isChildrenChannel(name: String): Boolean =
         name.contains("少儿") || name.contains("少兒") || name.contains("卡通") ||
-            Regex("^CCTV[- ]?14(?:台|频道)?$", RegexOption.IGNORE_CASE).matches(name)
+            CCTV_14.matches(name)
 
     private fun isSportsChannel(name: String): Boolean =
         name.contains("体育") || name.contains("體育") ||
-            Regex("^CCTV[- ]?(5\\+?|16)(?:\\D.*)?$", RegexOption.IGNORE_CASE).matches(name)
+            CCTV_SPORTS.matches(name)
 
     private fun isNewsChannel(name: String): Boolean =
         name.contains("新闻") || name.contains("新聞") ||
-            Regex("^CCTV[- ]?13(?:台|频道)?$", RegexOption.IGNORE_CASE).matches(name)
+            CCTV_13.matches(name)
+
+    private data class ChannelSortKey(
+        val channel: ChannelEntity,
+        val categoryIndex: Int,
+        val cctv: Int,
+    )
+
+    private val CCTV_NUMBER = Regex("^CCTV[- ]?(\\d+)(\\+)?", RegexOption.IGNORE_CASE)
+    private val CCTV_14 = Regex("^CCTV[- ]?14(?:台|频道)?$", RegexOption.IGNORE_CASE)
+    private val CCTV_SPORTS = Regex("^CCTV[- ]?(5\\+?|16)(?:\\D.*)?$", RegexOption.IGNORE_CASE)
+    private val CCTV_13 = Regex("^CCTV[- ]?13(?:台|频道)?$", RegexOption.IGNORE_CASE)
 }
