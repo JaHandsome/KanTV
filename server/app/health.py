@@ -410,11 +410,21 @@ class HealthMonitor(object):
         now = utcnow()
         max_lines = int(self.cfg.settings['limits']['max_lines_per_channel'])
         channels = self.cfg.channels.get('channels') or []
+        grouped = {}
+        if channels and max_lines > 0:
+            unique = list(dict.fromkeys(channels))
+            marks = ','.join('?' * len(unique))
+            rows = self.db.query(
+                'SELECT id, channel_key FROM sources WHERE channel_key IN (%s) '
+                "AND status='active' AND av LIKE 'video%%' "
+                'ORDER BY channel_key, score DESC, id ASC' % marks,
+                tuple(unique))
+            for row in rows:
+                bucket = grouped.setdefault(row['channel_key'], [])
+                if len(bucket) < max_lines:
+                    bucket.append(row)
         for key in channels:
-            cands = self.db.query(
-                "SELECT id FROM sources WHERE channel_key=? AND status='active' "
-                "AND av LIKE 'video%' ORDER BY score DESC, id ASC LIMIT ?",
-                (key, max_lines))
+            cands = grouped.get(key) or []
             self.db.execute('DELETE FROM lineups WHERE channel_key=?', (key,))
             if cands:
                 self.db.executemany(

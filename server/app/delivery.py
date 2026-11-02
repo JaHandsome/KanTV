@@ -160,24 +160,37 @@ def collect_deliverable_lines(db, channels, max_lines, profiles=DELIVERABLE_PROF
         lines = lines_by_key.setdefault(r['k'], [])
         if len(lines) < max_lines:
             lines.append(r)
+    # 过滤后仍没有合格 lineups 的频道，一次取回再按频道截断。
+    # 与逐频道查询同序：score DESC, id ASC，且 route 过滤之后才数 max_lines。
+    missing = []
+    seen_missing = set()
     for key in channels:
-        if lines_by_key.get(key) or max_lines <= 0:
+        if lines_by_key.get(key) or max_lines <= 0 or key in seen_missing:
             continue
+        seen_missing.add(key)
+        missing.append(key)
+    if missing:
+        key_marks = ','.join('?' * len(missing))
         cands = db.query(
-            'SELECT ' + _fields('') + " FROM sources WHERE channel_key=? AND "
+            'SELECT channel_key AS k, ' + _fields('') +
+            ' FROM sources WHERE channel_key IN (%s) AND '
             "status='active' AND av LIKE 'video%%' AND profile IN (%s) "
-            'ORDER BY score DESC, id ASC' % marks,
-            (key,) + tuple(profiles))
-        picked = []
+            'ORDER BY channel_key, score DESC, id ASC' % (key_marks, marks),
+            tuple(missing) + tuple(profiles))
+        by_key = {}
         for c in cands:
-            if media3_deliverable_route(c.get('container'), c.get('encryption'),
-                                        c.get('drm'), c.get('url')) is None:
-                continue
-            picked.append(c)
-            if len(picked) >= max_lines:
-                break
-        if picked:
-            lines_by_key[key] = picked
+            by_key.setdefault(c['k'], []).append(c)
+        for key in missing:
+            picked = []
+            for c in by_key.get(key, ()):
+                if media3_deliverable_route(c.get('container'), c.get('encryption'),
+                                            c.get('drm'), c.get('url')) is None:
+                    continue
+                picked.append(c)
+                if len(picked) >= max_lines:
+                    break
+            if picked:
+                lines_by_key[key] = picked
     return lines_by_key
 
 
