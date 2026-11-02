@@ -126,12 +126,31 @@ def media3_deliverable_route(container, encryption, drm, url=''):
 
 # ================= 候选集取数（builder 与 hub 的唯一共享实现） =================
 
+def lineup_slot_counts(db, channels):
+    """每个频道在 lineups 表里的行数，含已死、音频和不可投递路由。
+
+    这些行在下一轮重排前仍占着名额。只数过滤后还看得见的行，会把满快照看成没排满。
+    """
+    unique = list(dict.fromkeys(channels))
+    if not unique:
+        return {}
+    marks = ','.join('?' * len(unique))
+    return {
+        row['k']: row['n']
+        for row in db.query(
+            'SELECT channel_key AS k, COUNT(*) AS n FROM lineups '
+            'WHERE channel_key IN (%s) GROUP BY channel_key' % marks,
+            tuple(unique))
+    }
+
+
 def collect_deliverable_lines(db, channels, max_lines, profiles=DELIVERABLE_PROFILES):
     """{channel_key: [line_row]} —— builder/hub 基础候选集的**唯一**取数实现。
 
-    lineups 优先（health 已重排的线路表）。过滤后已经满额，或快照里的行全部可投、
-    只是不足 max_lines 时，保留 rank，不把线外的源插进来。无效 route 占了名额，
-    或一条可投的都没有时，才回退 sources 按分数重选。两处均按同一口径过滤（与
+    lineups 优先（health 已重排的线路表）。快照没排满，或过滤后已经满额时，保留
+    rank，不把线外的源插进来。快照行数已经到 max_lines，但可投的变少（死线、音频、
+    无效 route 占着名额），或一条可投的都没有时，才回退 sources 按分数重选。
+    名额按 lineups 表行数计，不按过滤后还看得见的行数计。两处均按同一口径过滤（与
     `health.rebuild_lineups` 写 lineups 的规则一致）：
 
     - `status='active' AND av LIKE 'video%'` —— lineups 只是重排的**快照**，
@@ -149,29 +168,28 @@ def collect_deliverable_lines(db, channels, max_lines, profiles=DELIVERABLE_PROF
     """
     marks = ','.join('?' * len(profiles))
     lines_by_key = {}
-    raw_count = {}
+    slot_count = lineup_slot_counts(db, channels) if max_lines > 0 else {}
     for r in db.query(
             'SELECT l.channel_key AS k, l.rank AS rank, ' + _fields('s.') +
             ' FROM lineups l JOIN sources s ON s.id = l.source_id '
             "WHERE s.status='active' AND s.av LIKE 'video%%' "
             'AND s.profile IN (%s) ORDER BY l.channel_key, l.rank' % marks,
             tuple(profiles)):
-        raw_count[r['k']] = raw_count.get(r['k'], 0) + 1
         if media3_deliverable_route(r.get('container'), r.get('encryption'),
                                     r.get('drm'), r.get('url')) is None:
             continue
         lines = lines_by_key.setdefault(r['k'], [])
         if len(lines) < max_lines:
             lines.append(r)
-    # 无效 route 占了名额，或一条可投的都没有：按分数重选。
-    # 快照里的行全部可投、只是没排满：保持 rank，不把线外的源插进来。
+    # 快照已满但可投变少，或一条可投的都没有：按分数重选。
+    # 快照没排满：保持 rank，不把线外的源插进来。
     short = []
     seen_short = set()
     for key in channels:
         have = lines_by_key.get(key)
         if max_lines <= 0 or (have and len(have) >= max_lines) or key in seen_short:
             continue
-        if have and raw_count.get(key, 0) == len(have):
+        if have and slot_count.get(key, 0) < max_lines:
             continue
         seen_short.add(key)
         short.append(key)

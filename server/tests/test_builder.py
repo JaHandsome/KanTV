@@ -46,6 +46,29 @@ class TestBuilder(unittest.TestCase):
             'INSERT INTO lineups(channel_key, source_id, rank, updated_at) VALUES (?,?,?,?)',
             (key, sid, rank, utcnow()))
 
+    def test_dead_lineup_slot_still_fills_a_direct_backup(self):
+        """死线占满 direct 名额时，补上快照外的直链，已入选的直链仍在前面。"""
+        self.cfg.settings['limits']['max_lines_per_channel'] = 2
+        now = utcnow()
+
+        def add(url, digest, score, status='active'):
+            self.db.execute(
+                "INSERT INTO sources(url, url_hash, channel_name, channel_key, origin, status,"
+                " av, score, first_seen, last_seen, profile) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+                (url, digest, 'CCTV1', 'CCTV1', 'test', status, 'video', score, now, now, 'direct'))
+            return self.db.query_one('SELECT id FROM sources WHERE url_hash=?', (digest,))['id']
+
+        dead = add('http://x/dead', 'dead', 99, 'dead')
+        low = add('http://x/low', 'low', 5)
+        add('http://x/live', 'live', 50)
+        self._add_lineup('CCTV1', dead, 0)
+        self._add_lineup('CCTV1', low, 1)
+        OutputBuilder(self.cfg, self.db).build()
+        with open(os.path.join(self.cfg.output_dir, 'live.txt'), encoding='utf-8') as handle:
+            txt = handle.read()
+        self.assertIn('CCTV1,http://x/low#http://x/live\n', txt)
+        self.assertNotIn('http://x/dead', txt)
+
     def test_other_profiles_do_not_keep_a_direct_lineup_short(self):
         """need-key 占掉 lineups 名额时，direct 清单仍要补上名额之外的直链。"""
         self.cfg.settings['limits']['max_lines_per_channel'] = 2
