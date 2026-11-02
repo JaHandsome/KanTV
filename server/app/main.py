@@ -15,6 +15,7 @@ import os
 import signal
 import sys
 import threading
+import traceback
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if ROOT not in sys.path:
@@ -27,7 +28,7 @@ from app.db import Database                     # noqa: E402
 from app.discovery import SeedProvider, SourceDiscovery  # noqa: E402
 from app.hub import Hub                          # noqa: E402
 from app.httpserver import HttpServer           # noqa: E402
-from app.logutil import get_logger, setup_logging  # noqa: E402
+from app.logutil import get_logger, redact_exc, redact_text, setup_logging  # noqa: E402
 from app.net import NetClient                   # noqa: E402
 from app.scheduler import Scheduler             # noqa: E402
 from app.status import StatusProvider           # noqa: E402
@@ -75,10 +76,11 @@ def main(argv):
 
     # P1-A：任何线程未捕获异常兜底记录（防静默死线程，日志全活动闭环）
     def _thread_excepthook(args):
-        log.error('线程 %s 未捕获异常: %s',
+        log.error('线程 %s 未捕获异常: %s\n%s',
                   args.thread.name if args.thread is not None else '?',
-                  args.exc_value,
-                  exc_info=(args.exc_type, args.exc_value, args.exc_traceback))
+                  redact_exc(args.exc_value),
+                  redact_text(''.join(traceback.format_exception(
+                      args.exc_type, args.exc_value, args.exc_traceback))))
     threading.excepthook = _thread_excepthook
 
     db = Database(cfg.db_path)
@@ -91,7 +93,7 @@ def main(argv):
         if rebuilt is not None:
             log.info('签名名单指纹变化, 已全表重算 url_key: %s', rebuilt)
     except Exception as e:  # noqa: BLE001 - 不阻塞启动，调度 tick 会重试
-        log.error('url_key 指纹守卫异常(调度 tick 将重试): %s', e)
+        log.error('url_key 指纹守卫异常(调度 tick 将重试): %s', redact_exc(e))
     net = NetClient(cfg)
 
     # 空库冷启动 + 首次构建（HTTP 立即可用）

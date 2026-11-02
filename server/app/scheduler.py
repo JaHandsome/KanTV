@@ -9,6 +9,7 @@
 """
 import threading
 import time
+import traceback
 
 from app import schema
 from app.builder import OutputBuilder
@@ -16,7 +17,7 @@ from app.config import DEFAULT_SETTINGS, Config
 from app.db import Database, utcnow
 from app.discovery import SourceDiscovery
 from app.health import HealthMonitor
-from app.logutil import get_logger
+from app.logutil import get_logger, redact_exc, redact_text
 from app.net import NetClient
 from app.verifier import Verifier
 
@@ -104,8 +105,10 @@ class Scheduler(threading.Thread):
             log.info('任务 %s 完成, 耗时 %.1fs', name, time.time() - t0)
             return True
         except Exception as e:  # noqa: BLE001 - tick 粒度异常兜底
-            self._push_history(name, False, '异常: %s' % e)
-            log.error('任务 %s 异常: %s', name, e, exc_info=True)
+            safe = redact_exc(e)
+            self._push_history(name, False, '异常: %s' % safe)
+            log.error('任务 %s 异常: %s\n%s', name, safe,
+                      redact_text(traceback.format_exc()))
             return False
         finally:
             self.running[name] = False
@@ -127,7 +130,7 @@ class Scheduler(threading.Thread):
             try:
                 self.cfg.reload()   # 热加载（JSON 小文件，开销可忽略）
             except Exception as e:  # noqa: BLE001
-                log.error('配置热加载失败, 沿用旧配置: %s', e)
+                log.error('配置热加载失败, 沿用旧配置: %s', redact_exc(e))
             # P0-2 方案 C：签名名单指纹守卫。配置热加载可能改了 signed_url_params（含
             # settings.json 覆盖）——指纹变化即全表按当前名单重算 url_key（幂等，指纹不变
             # 零操作）。挂在这里同时覆盖「启动首轮 tick」与「热重载名单变更」两个触发点。
@@ -138,7 +141,7 @@ class Scheduler(threading.Thread):
             except Exception as e:  # noqa: BLE001 - 失败由下一轮 tick 重试，不杀调度
                 # DB 仍持旧签名语义时，不向 Hub 暴露新名单；其他配置域照常热更新。
                 self.cfg.settings = previous_settings
-                log.error('url_key 指纹守卫异常(下一轮重试): %s', e)
+                log.error('url_key 指纹守卫异常(下一轮重试): %s', redact_exc(e))
         now = time.time()
         fns = self._tick_fns()
         due = [t for t in TASK_ORDER
@@ -154,7 +157,7 @@ class Scheduler(threading.Thread):
                         self.health.rebuild_lineups()
                         log.info('verify 后线路重排完成')
                     except Exception as e:  # noqa: BLE001 - 失败由下一轮探活兜底
-                        log.error('verify 后线路重排异常(下一轮探活兜底): %s', e)
+                        log.error('verify 后线路重排异常(下一轮探活兜底): %s', redact_exc(e))
         # 状态可能变更的任务跑完后，紧跟一次输出重建
         if changed and not self.running.get('rebuild'):
             self._run_task('rebuild', fns['rebuild'])
@@ -169,7 +172,7 @@ class Scheduler(threading.Thread):
                     int(self.cfg.settings.get('orphan_retention_days', 30)))
                 self.db.set_meta('last_cleanup', str(int(now)))
         except Exception as e:  # noqa: BLE001
-            log.error('数据清理异常: %s', e)
+            log.error('数据清理异常: %s', redact_exc(e))
 
     def _sleep_seconds(self):
         """距下一个到期任务的时间（上限 30s，保证热加载响应性）。"""
@@ -195,11 +198,12 @@ class Scheduler(threading.Thread):
             try:
                 self.tick()
             except Exception as e:  # noqa: BLE001 - 任何 tick 异常不杀线程
-                log.error('调度 tick 异常: %s', e, exc_info=True)
+                log.error('调度 tick 异常: %s\n%s', redact_exc(e),
+                          redact_text(traceback.format_exc()))
             try:
                 self._stop_event.wait(self._sleep_seconds())
             except Exception as e:  # noqa: BLE001 - P0 僵尸模式防御：休眠计算异常退避而非杀线程
-                log.error('调度休眠计算异常, 退避 30s: %s', e)
+                log.error('调度休眠计算异常, 退避 30s: %s', redact_exc(e))
                 self._stop_event.wait(30.0)
         try:
             self.db.close()
