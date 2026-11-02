@@ -274,7 +274,9 @@ class HealthMonitor(object):
             seg_url = urljoin(cur, uri)
             if dur_ms is None:
                 dur_ms = target_ms
-            t0 = time.time()
+            # 耗时用单调钟。墙上时钟在这一跳里前跳会把 download_ms 撑大，
+            # ratio 越过实时线后按最坏样本折进 score，快线会被当成慢线换下。
+            t0 = time.monotonic()
             try:
                 fetch_complete = getattr(self.net, 'fetch_complete', None)
                 if fetch_complete is not None:
@@ -286,7 +288,7 @@ class HealthMonitor(object):
                         seg_url, ua=ua, limit=max_bytes, timeout=seg_timeout)
                     if len(data) >= max_bytes:
                         raise NetBodyLimitError('segment reached byte limit')
-                dl_ms = int((time.time() - t0) * 1000)
+                dl_ms = int((time.monotonic() - t0) * 1000)
                 download_total += dl_ms
                 if not data:
                     last_err = '空分片'
@@ -297,7 +299,7 @@ class HealthMonitor(object):
                     durations.append(dur_ms)
                 last_err = ''
             except Exception as e:  # noqa: BLE001 - 单分片失败不杀整次探测
-                download_total += int((time.time() - t0) * 1000)
+                download_total += int((time.monotonic() - t0) * 1000)
                 last_err = type(e).__name__
                 continue
         if not ok:
