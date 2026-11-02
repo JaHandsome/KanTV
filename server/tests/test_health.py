@@ -425,9 +425,12 @@ class TestHealth(unittest.TestCase):
         self.assertEqual(len(picked), 1)
         sql, params = picked[0]
         self.assertIn('channel_key IN', sql)
+        self.assertIn('SELECT id, channel_key, url, container', sql)
+        self.assertNotIn('drm_key', sql)
         self.assertNotIn('LIMIT', sql)
         self.assertNotIn('video%%', sql)
         self.assertEqual(params, ('湖南卫视', 'CCTV1'))
+        self.assertNotIn('drm_key', m._throughput_targets()[0])
 
         self.cfg.settings['limits']['max_lines_per_channel'] = 0
         self.cfg.settings['health']['throughput_extra_candidates'] = 0
