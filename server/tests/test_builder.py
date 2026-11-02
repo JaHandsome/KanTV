@@ -194,6 +194,53 @@ class TestBuilder(unittest.TestCase):
             with self.assertRaises(OSError):
                 OutputBuilder.atomic_write(path, 'SHOULD_FAIL2')
 
+    def test_fallback_one_query_keeps_score_order_and_cap(self):
+        """无 lineups 的频道一次取 sources：score DESC, id ASC，截断 max_lines。
+
+        已有合格 lineups 的频道不进这条回退查询。dead / 音频 / 非 direct 仍排除。
+        """
+        self.cfg.settings['limits']['max_lines_per_channel'] = 2
+        kept = self._add_source('http://x/kept', 'k1', 'CCTV1', score=1)
+        self._add_lineup('CCTV1', kept, 0)
+        self._add_source('http://x/hn-low', 'hn1', '湖南卫视', score=10)
+        self._add_source('http://x/hn-mid-a', 'hn2', '湖南卫视', score=30)
+        self._add_source('http://x/hn-hi', 'hn3', '湖南卫视', score=50)
+        self._add_source('http://x/hn-mid-b', 'hn4', '湖南卫视', score=30)
+        self._add_source('http://x/hn-dead', 'hn5', '湖南卫视', status='dead', score=99)
+        self._add_source('http://x/hn-aud', 'hn6', '湖南卫视', av='audio(AAC音频)', score=98)
+        kodi = self._add_source('http://x/hn-kodi', 'hn7', '湖南卫视', score=90)
+        self.db.execute('UPDATE sources SET profile=? WHERE id=?', ('m3u-kodiprop', kodi))
+        self._add_source('http://x/gd-lo', 'gd1', '广东珠江', score=3)
+        self._add_source('http://x/gd-hi', 'gd2', '广东珠江', score=7)
+        self._add_source('http://x/gd-cut', 'gd3', '广东珠江', score=1)
+
+        calls = []
+        real = self.db.query
+
+        def wrapped(sql, params=()):
+            calls.append((sql, params))
+            return real(sql, params)
+
+        self.db.query = wrapped
+        items = OutputBuilder(self.cfg, self.db)._collect_items()
+        by_name = {it['name']: it['urls'] for it in items}
+        self.assertEqual([it['name'] for it in items], ['CCTV1', '湖南卫视', '广东珠江'])
+        self.assertEqual(by_name['CCTV1'], ['http://x/kept'])
+        self.assertEqual(by_name['湖南卫视'], ['http://x/hn-hi', 'http://x/hn-mid-a'])
+        self.assertEqual(by_name['广东珠江'], ['http://x/gd-hi', 'http://x/gd-lo'])
+
+        fallback = [c for c in calls if 'FROM sources WHERE' in c[0]]
+        self.assertEqual(len(fallback), 1)
+        sql, params = fallback[0]
+        self.assertIn('ORDER BY channel_key, score DESC, id ASC', sql)
+        self.assertNotIn('LIMIT', sql)
+        self.assertNotIn('video%%', sql)
+        self.assertFalse(any('channel_key=?' in q for q, _ in calls))
+        self.assertNotIn('CCTV1', params)
+        self.assertIn('湖南卫视', params)
+        self.assertIn('广东珠江', params)
+        self.assertIn('direct', params)
+
     def test_max_lines(self):
         """max_lines_per_channel 限制每频道线路数。"""
         for i in range(5):

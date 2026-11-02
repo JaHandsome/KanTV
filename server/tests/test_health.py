@@ -362,6 +362,65 @@ class TestHealth(unittest.TestCase):
             ('CCTV1',))
         self.assertEqual([r['source_id'] for r in rows], [s0, s1])   # 按 score 重排
 
+    def test_throughput_targets_one_query_preserves_channel_order_and_cap(self):
+        """吞吐目标一次取回：按清单顺序拼接，频道内 score DESC / id ASC，名额=max_lines+候补。"""
+        self.cfg.channels['channels'] = ['湖南卫视', 'CCTV1', '湖南卫视']
+        self.cfg.settings['limits']['max_lines_per_channel'] = 2
+        self.cfg.settings['health']['throughput_extra_candidates'] = 1  # limit 3
+
+        def hls(url, key, score, container='hls', status='active', av='video'):
+            sid = self._add(url, key=key, status=status, av=av, score=score)
+            self.db.execute('UPDATE sources SET container=? WHERE id=?', (container, sid))
+            return sid
+
+        hls('http://x/hn-s10', '湖南卫视', 10)
+        hls('http://x/hn-s30a', '湖南卫视', 30)
+        hls('http://x/hn-s50', '湖南卫视', 50)
+        hls('http://x/hn-s30b', '湖南卫视', 30)
+        hls('http://x/hn-flv', '湖南卫视', 99, container='flv')
+        hls('http://x/hn-dead', '湖南卫视', 98, status='dead')
+        hls('http://x/hn-aud', '湖南卫视', 97, av='audio-only(TS)')
+        hls('http://x/hn-flaky', '湖南卫视', 96, status='flaky')
+        hls('http://x/c-lo', 'CCTV1', 5)
+        hls('http://x/c-hi', 'CCTV1', 80)
+        hls('http://x/c-flv', 'CCTV1', 100, container='flv')
+        hls('http://x/other', '东方卫视', 100)
+
+        calls = []
+        real = self.db.query
+
+        def wrapped(sql, params=()):
+            calls.append((sql, params))
+            return real(sql, params)
+
+        self.db.query = wrapped
+        m = self._monitor([])
+        urls = [r['url'] for r in m._throughput_targets()]
+        self.assertEqual(urls, [
+            'http://x/hn-s50', 'http://x/hn-s30a', 'http://x/hn-s30b',
+            'http://x/c-hi', 'http://x/c-lo',
+        ])
+        picked = [c for c in calls if 'container=' in c[0]]
+        self.assertEqual(len(picked), 1)
+        sql, params = picked[0]
+        self.assertIn('channel_key IN', sql)
+        self.assertNotIn('LIMIT', sql)
+        self.assertNotIn('video%%', sql)
+        self.assertEqual(params, ('湖南卫视', 'CCTV1'))
+
+        self.cfg.settings['limits']['max_lines_per_channel'] = 0
+        self.cfg.settings['health']['throughput_extra_candidates'] = 0
+        n = len(calls)
+        self.assertEqual(m._throughput_targets(), [])
+        self.assertEqual(len(calls), n)
+
+        self.cfg.channels['channels'] = []
+        self.cfg.settings['limits']['max_lines_per_channel'] = 2
+        self.cfg.settings['health']['throughput_extra_candidates'] = 1
+        n = len(calls)
+        self.assertEqual(m._throughput_targets(), [])
+        self.assertEqual(len(calls), n)
+
 
 if __name__ == '__main__':
     unittest.main()
