@@ -26,7 +26,7 @@ from app.config import DEFAULT_RULES, DEFAULT_SETTINGS
 from app.db import DELIVERABLE_PROFILES, delivery_profile, iso_plus_hours, utcnow
 from app.throughput import (THROUGHPUT_FAIL_RATIO, THROUGHPUT_REALTIME_RATIO,
                             is_transport_reason, throughput_window_factor)
-from app.logutil import get_logger
+from app.logutil import get_logger, redact_url
 from app.parser import ChannelParser
 
 log = get_logger('verifier')
@@ -1216,7 +1216,7 @@ class Verifier(object):
                 "UPDATE sources SET av=?, status='active', profile=?, last_verified=?, "
                 'ok_streak=0, fail_streak=0, backoff_until=NULL, ' + cols + ' WHERE id=?',
                 (av, profile, now) + ok_tail + (source['id'],))
-            log.info('源 #%s 验证通过 -> active (%s)', source['id'], source['url'][:60])
+            log.info('源 #%s 验证通过 -> active (%s)', source['id'], redact_url(source['url']))
         elif verdict == 'unsupported':
             self.db.execute(
                 "UPDATE sources SET status='unsupported', av=?, last_verified=?, "
@@ -1259,7 +1259,7 @@ class Verifier(object):
                 + (source['id'],))
             if until:
                 log.info('源 #%s 验证失败(fail_streak=%d), 冷却至 %s (%s)',
-                         source['id'], streak, until, source['url'][:60])
+                         source['id'], streak, until, redact_url(source['url']))
         return verdict
 
     def reevaluate_drm_pool(self):

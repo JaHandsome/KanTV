@@ -22,7 +22,7 @@ import re
 import time
 
 from app.db import COLLISION_ORPHAN_STATUS, delivery_profile, utcnow
-from app.logutil import get_logger
+from app.logutil import get_logger, redact_text, redact_url
 from app.parser import ChannelParser
 
 log = get_logger('discovery')
@@ -189,7 +189,7 @@ class RepoProvider(object):
                 body = self.net.fetch_retry(url, limit=limit)
                 return body.decode('utf-8', 'ignore'), url
             except Exception as e:  # noqa: BLE001 - 单仓失败只记日志不中断
-                log.error('仓库拉取失败 %s (%s): %s', row['repo'], url[:80], e)
+                log.error('仓库拉取失败 %s (%s): %s', row['repo'], redact_url(url), redact_text(e))
         return None, None
 
     def collect(self):
@@ -244,7 +244,7 @@ class RepoMinerProvider(object):
             _st, body, _ct = self.net.fetch(url, limit=524288)
             return body.decode('utf-8', 'ignore')
         except Exception as e:  # noqa: BLE001 - 单个 README 失败不中断
-            log.info('挖矿: README 拉取跳过 %s (%s)', repo, str(e)[:60])
+            log.info('挖矿: README 拉取跳过 %s (%s)', repo, redact_text(e)[:120])
             return None
 
     # ---------- 候选提取 ----------
@@ -300,7 +300,7 @@ class RepoMinerProvider(object):
                     out.extend((branch, n) for n in cands)
                     break
             except Exception as e:  # noqa: BLE001 - 分支探测失败尝试下一分支
-                log.info('挖矿: 主页展开失败 %s@%s (%s)', repo, branch, str(e)[:60])
+                log.info('挖矿: 主页展开失败 %s@%s (%s)', repo, branch, redact_text(e)[:120])
         return out
 
     # ---------- 校验 ----------
@@ -314,7 +314,7 @@ class RepoMinerProvider(object):
             entries = parse_playlist(self.parser, text, path)
             return len(entries) >= 3, len(entries)
         except Exception as e:  # noqa: BLE001 - 校验失败即丢弃该候选
-            log.info('挖矿: 候选校验失败 %s@%s/%s (%s)', repo, branch, path, str(e)[:60])
+            log.info('挖矿: 候选校验失败 %s@%s/%s (%s)', repo, branch, path, redact_text(e)[:120])
             return False, 0
 
     # ---------- 主流程 ----------
@@ -422,7 +422,7 @@ class UrlListProvider(object):
                                         limit=self._fetch_limit())
             return body.decode('utf-8', 'ignore')
         except Exception as e:  # noqa: BLE001 - 单清单失败只记日志
-            log.error('URL 清单拉取失败 %s (%s): %s', item.get('id'), str(url)[:80], e)
+            log.error('URL 清单拉取失败 %s (%s): %s', item.get('id'), redact_url(str(url)), redact_text(e))
             return None
 
     def _entries(self, item, text):
