@@ -408,6 +408,17 @@ class TestCollectDeliverableLinesSharedLeaf(unittest.TestCase):
         self.assertEqual([r['url'] for r in out['CCTV1']],
                          ['http://x/a.m3u8', 'http://x/b.m3u8'])
 
+    def test_lineups被无效route占名额时仍补满有效源(self):
+        # max_lines 个 lineups 里夹着无效 route，过滤后只剩一条。
+        # 名额之外的有效源必须补上，并按分数而不是残缺 rank 排序。
+        self._lineup('CCTV1', self._add('http://x/bad.flv', 'CCTV1',
+                                        container='flv', score=99), 0)
+        self._lineup('CCTV1', self._add('http://x/low.m3u8', 'CCTV1', score=5), 1)
+        self._add('http://x/high.m3u8', 'CCTV1', score=50)
+        out = collect_deliverable_lines(self.db, ['CCTV1'], 2)
+        self.assertEqual([r['url'] for r in out['CCTV1']],
+                         ['http://x/high.m3u8', 'http://x/low.m3u8'])
+
     def test_fallback行带齐两端投影字段并集(self):
         # 无 lineups -> 回退 sources；hub 投影需要 url_key/score/verified_at，
         # builder 投影需要 profile，行里一个都不能缺（取列并集契约）

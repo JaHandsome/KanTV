@@ -129,8 +129,9 @@ def media3_deliverable_route(container, encryption, drm, url=''):
 def collect_deliverable_lines(db, channels, max_lines, profiles=DELIVERABLE_PROFILES):
     """{channel_key: [line_row]} —— builder/hub 基础候选集的**唯一**取数实现。
 
-    lineups 优先（health 已重排的线路表）；`channels` 中某频道**过滤后无合格
-    lineups** 时回退直查 sources。两处均按同一口径过滤（与
+    lineups 优先（health 已重排的线路表）；`channels` 中某频道**过滤后不足
+    max_lines** 时回退直查 sources，按分数重选满额。只在过滤后已经满额时保留
+    lineups 的 rank 次序。两处均按同一口径过滤（与
     `health.rebuild_lineups` 写 lineups 的规则一致）：
 
     - `status='active' AND av LIKE 'video%'` —— lineups 只是重排的**快照**，
@@ -160,27 +161,29 @@ def collect_deliverable_lines(db, channels, max_lines, profiles=DELIVERABLE_PROF
         lines = lines_by_key.setdefault(r['k'], [])
         if len(lines) < max_lines:
             lines.append(r)
-    # 过滤后仍没有合格 lineups 的频道，一次取回再按频道截断。
+    # 过滤后凑不满 max_lines 的频道，一次取回再按频道截断。
+    # 无效 route 占满 lineups 名额时，不能只留下残缺的几条；满额才保留 rank。
     # 与逐频道查询同序：score DESC, id ASC，且 route 过滤之后才数 max_lines。
-    missing = []
-    seen_missing = set()
+    short = []
+    seen_short = set()
     for key in channels:
-        if lines_by_key.get(key) or max_lines <= 0 or key in seen_missing:
+        have = lines_by_key.get(key)
+        if max_lines <= 0 or (have and len(have) >= max_lines) or key in seen_short:
             continue
-        seen_missing.add(key)
-        missing.append(key)
-    if missing:
-        key_marks = ','.join('?' * len(missing))
+        seen_short.add(key)
+        short.append(key)
+    if short:
+        key_marks = ','.join('?' * len(short))
         cands = db.query(
             'SELECT channel_key AS k, ' + _fields('') +
             ' FROM sources WHERE channel_key IN (%s) AND '
             "status='active' AND av LIKE 'video%%' AND profile IN (%s) "
             'ORDER BY channel_key, score DESC, id ASC' % (key_marks, marks),
-            tuple(missing) + tuple(profiles))
+            tuple(short) + tuple(profiles))
         by_key = {}
         for c in cands:
             by_key.setdefault(c['k'], []).append(c)
-        for key in missing:
+        for key in short:
             picked = []
             for c in by_key.get(key, ()):
                 if media3_deliverable_route(c.get('container'), c.get('encryption'),
