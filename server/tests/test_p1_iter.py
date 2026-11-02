@@ -370,7 +370,7 @@ class TestHealthzHeartbeat(unittest.TestCase):
         shutil.rmtree(self.tmp, ignore_errors=True)
 
     def test_healthz_ok_with_fresh_heartbeat(self):
-        self.s.last_tick_time = time.time()
+        self.s.last_tick_time = time.monotonic()
         p = StatusProvider(self.s.cfg, self.s.db, self.s)
         code, data = p.healthz()
         self.assertEqual(code, 200)
@@ -381,7 +381,7 @@ class TestHealthzHeartbeat(unittest.TestCase):
         self.assertIn('last_tick_age_s', data)
 
     def test_healthz_503_when_heartbeat_stale(self):
-        self.s.last_tick_time = time.time() - 999999    # 远超 5 x probe 周期
+        self.s.last_tick_time = time.monotonic() - 999999    # 远超 5 x probe 周期
         p = StatusProvider(self.s.cfg, self.s.db, self.s)
         code, data = p.healthz()
         self.assertEqual(code, 503)

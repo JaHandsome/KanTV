@@ -2,6 +2,8 @@
 """Scheduler：定时流水线调度（P0-4）。
 
 - daemon 线程 while True 循环，按 `last_run + 周期` 判到期；
+  进程内的到期、休眠和心跳用单调钟，墙上时钟回拨不会把任务冻住；
+  落盘的清理水位仍用墙上时钟（单调钟重启后归零，不能写入 meta）；
 - 优先级：probe > verify > discovery > rebuild（探活最轻优先插队）；
 - running 字典互斥防重入（上轮未完自动跳过，不排队堆积）；
 - 每 tick 重读配置（热加载，改周期/阈值下轮生效）；
@@ -43,9 +45,10 @@ class Scheduler(threading.Thread):
         # threading.Thread 已定义内部方法 _stop()，不能用 Event 覆盖它；
         # 否则 join() 收尾时会把 Event 当函数调用并抛 TypeError。
         self._stop_event = threading.Event()
+        # 0 表示该任务本进程还没成功跑过。到期判断用单调钟，不能把 0 当成开机时刻。
         self.last_run = {t: 0.0 for t in TASK_ORDER}
         self.running = {t: False for t in TASK_ORDER}
-        # P1-E 调度心跳：最近一次 tick 时间（healthz 判活依据，None=尚未运行）
+        # P1-E 调度心跳：最近一次 tick 的单调钟读数（healthz 判活依据，None=尚未运行）
         self.last_tick_time = None
         # P1-G 状态页：最近流水线任务结果（内存环形，上限 50 条）
         self.history = []
@@ -97,12 +100,14 @@ class Scheduler(threading.Thread):
             log.warning('任务 %s 上轮未完成, 本轮跳过', name)
             return False
         self.running[name] = True
-        t0 = time.time()
+        t0 = time.monotonic()
         try:
             fn()
-            self.last_run[name] = time.time()
-            self._push_history(name, True, '完成, 耗时 %.1fs' % (time.time() - t0))
-            log.info('任务 %s 完成, 耗时 %.1fs', name, time.time() - t0)
+            finished = time.monotonic()
+            self.last_run[name] = finished
+            elapsed = finished - t0
+            self._push_history(name, True, '完成, 耗时 %.1fs' % elapsed)
+            log.info('任务 %s 完成, 耗时 %.1fs', name, elapsed)
             return True
         except Exception as e:  # noqa: BLE001 - tick 粒度异常兜底
             safe = redact_exc(e)
@@ -122,8 +127,9 @@ class Scheduler(threading.Thread):
 
     def tick(self):
         """一次调度判定：重读配置 -> 找到期任务 -> 按优先级串行执行。"""
-        # P1-E 心跳：tick 开始即刷新（后续任何异常都不影响心跳判定）
-        self.last_tick_time = time.time()
+        # P1-E 心跳：tick 开始即刷新（后续任何异常都不影响心跳判定）。
+        # 用单调钟：NTP 回拨时墙上时钟变小，不能把心跳年龄夹成 0。
+        self.last_tick_time = time.monotonic()
         # 订阅生成不能夹在名单发布与 url_key 刷新之间。
         with self.cfg.lock:
             previous_settings = self.cfg.settings
@@ -142,10 +148,9 @@ class Scheduler(threading.Thread):
                 # DB 仍持旧签名语义时，不向 Hub 暴露新名单；其他配置域照常热更新。
                 self.cfg.settings = previous_settings
                 log.error('url_key 指纹守卫异常(下一轮重试): %s', redact_exc(e))
-        now = time.time()
+        now = time.monotonic()
         fns = self._tick_fns()
-        due = [t for t in TASK_ORDER
-               if self._period(t) is not None and now - self.last_run[t] >= self._period(t)]
+        due = [t for t in TASK_ORDER if self._is_due(t, now)]
         changed = False
         for task in due:
             if self._run_task(task, fns[task]):
@@ -161,27 +166,42 @@ class Scheduler(threading.Thread):
         # 状态可能变更的任务跑完后，紧跟一次输出重建
         if changed and not self.running.get('rebuild'):
             self._run_task('rebuild', fns['rebuild'])
-        # 数据清理（低频：每天最多一次，跟随 verify 周期触发）
+        # 数据清理（低频：每天最多一次）。水位写在 meta 里，必须用墙上时钟：
+        # 单调钟在重启后归零，写进去会让清理永远等到开机满一天。
         try:
+            wall = time.time()
             last_cleanup = float(self.db.get_meta('last_cleanup', '0') or 0)
-            if now - last_cleanup > 86400:
+            if wall - last_cleanup > 86400:
                 self.db.cleanup(
                     int(self.cfg.settings.get('retention_days', 90)),
                     int(self.cfg.settings.get('dead_retention_days', 30)),
                     int(self.cfg.settings.get('checks_retention_days', 7)),
                     int(self.cfg.settings.get('orphan_retention_days', 30)))
-                self.db.set_meta('last_cleanup', str(int(now)))
+                self.db.set_meta('last_cleanup', str(int(wall)))
         except Exception as e:  # noqa: BLE001
             log.error('数据清理异常: %s', redact_exc(e))
 
+    def _is_due(self, task, now):
+        """周期任务是否到期。last_run<=0 表示本进程尚未成功执行，立即到期。"""
+        period = self._period(task)
+        if period is None:
+            return False
+        last = self.last_run[task]
+        return last <= 0.0 or now - last >= period
+
     def _sleep_seconds(self):
         """距下一个到期任务的时间（上限 30s，保证热加载响应性）。"""
-        now = time.time()
+        now = time.monotonic()
         waits = []
         for t in TASK_ORDER:
             p = self._period(t)
-            if p is not None:
-                waits.append(max(1.0, self.last_run[t] + p - now))
+            if p is None:
+                continue
+            last = self.last_run[t]
+            if last <= 0.0:
+                waits.append(1.0)
+            else:
+                waits.append(max(1.0, last + p - now))
         return min(min(waits) if waits else 30.0, 30.0)
 
     # ---------- 主循环 ----------
