@@ -322,7 +322,7 @@ class Hub(object):
                 req_schema = None
             if req_schema is not None and req_schema != HUB_SCHEMA:
                 log.info('hub: 客户端声明 hub_schema=%s（服务端=%d）client=%s app=%s',
-                         req_schema, HUB_SCHEMA, client, app)
+                         req_schema, HUB_SCHEMA, _log_field(client), _log_field(app))
 
             ch = self.cfg.channels
             groups_map = ch.get('channel_groups') or {}
@@ -581,11 +581,11 @@ class Hub(object):
                 else:
                     freeze_bad += 1
                     log.warning('hub: 冻结字段违反不变式 url_key=%s 原因=%s client=%s',
-                                uk, frz['reason'], _s(client))
+                                _log_field(uk), frz['reason'], _log_field(client))
             elif frz['partial']:
                 freeze_partial += 1
                 log.warning('hub: 冻结字段缺项，整组按未上报处理 url_key=%s 原因=%s client=%s',
-                            uk, frz['reason'], _s(client))
+                            _log_field(uk), frz['reason'], _log_field(client))
             rows.append((
                 reported_at,
                 _s(client), _s(app),
@@ -654,7 +654,7 @@ class Hub(object):
                  'truncated=%d freeze_ok=%d freeze_violation=%d freeze_partial=%d client=%s',
                  accepted, unknown_channel, unknown_url_key, rejected,
                  notice_accepted, unknown_notice_code, notice_rejected,
-                 truncated, freeze_ok, freeze_bad, freeze_partial, client)
+                 truncated, freeze_ok, freeze_bad, freeze_partial, _log_field(client))
         # ARCH P2-7：请求里的 hub_schema 只计数（meta 累加，跨请求可诊断
         # "多少回流来自旧 schema 客户端"）；**不校验、不拒绝**，旧客户端兼容红线。
         self._count_feedback_hub_schema(payload)
@@ -924,6 +924,21 @@ class Hub(object):
     def summary_response(self):
         body = self.encode(self.feedback_summary())
         return (200, {'Content-Type': 'application/json; charset=utf-8'}, body)
+
+
+def _log_field(value, limit=80):
+    """请求里的自由文本进日志前压成一行。
+
+    订阅查询参数没有鉴权。回流字段虽然要 Bearer，但仍由对端给出。
+    换行留在 ``%s`` 里会在审计日志中另起一条，看起来像服务端自己的记录。
+    """
+    if value is None:
+        return ''
+    text = ''.join(' ' if ord(ch) < 32 or ord(ch) == 127 else ch for ch in str(value))
+    text = ' '.join(text.split())
+    if len(text) > limit:
+        text = text[:limit] + '...'
+    return text
 
 
 def _s(v):
