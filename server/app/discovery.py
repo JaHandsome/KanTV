@@ -473,6 +473,9 @@ class UrlListProvider(object):
             text = self._fetch_list(item)
             if text is None:
                 continue
+            # 只有拿到正文才开始计周期。失败不记账，否则一次网络错误
+            # 会把这条清单冻住整个 refresh_minutes。
+            self._note_fetched(item)
             entries = self._entries(item, text)
             if entries:
                 out.append(('urllist:%s' % (item.get('id') or ''), entries))
@@ -480,7 +483,10 @@ class UrlListProvider(object):
         return out
 
     def _refresh_blocked(self, item):
-        """refresh_minutes 门控（进程内记账）：未到重拉周期则本轮跳过（首次不拦）。"""
+        """refresh_minutes 门控（进程内记账）：未到重拉周期则本轮跳过（首次不拦）。
+
+        只读上次成功拉取的时刻，不在这里写入。
+        """
         refresh = item.get('refresh_minutes')
         if refresh is None:
             return False
@@ -490,8 +496,14 @@ class UrlListProvider(object):
         if last is not None and (now - last) < float(refresh) * 60:
             log.info('URL 清单 %s: 距上次拉取未满 %s 分钟，跳过', item.get('id'), refresh)
             return True
-        _URL_LIST_LAST_FETCH[key] = now
         return False
+
+    def _note_fetched(self, item):
+        """成功拿到清单正文后才记下刷新时刻。"""
+        if item.get('refresh_minutes') is None:
+            return
+        key = item.get('id') or item.get('url')
+        _URL_LIST_LAST_FETCH[key] = time.monotonic()
 
 
 class SourceDiscovery(object):
