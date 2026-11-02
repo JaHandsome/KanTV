@@ -1419,19 +1419,30 @@ class Verifier(object):
         hours = int(self.cfg.settings.get(
             'blacklist_recheck_hours', DEFAULT_SETTINGS['blacklist_recheck_hours']))
         cutoff = iso_plus_hours(-hours)
+        # 先只取 id/url 扫规则。命中现行规则的行占绝大多数，不必把 drm_key
+        # 等整行读出来；配额内的少数再按原顺序取整行（record/probe 需要）。
         rows = self.db.query(
-            "SELECT * FROM sources WHERE status='blacklisted' AND channel_key != '' "
+            "SELECT id, url FROM sources WHERE status='blacklisted' AND channel_key != '' "
             'AND (last_verified IS NULL OR last_verified < ?) '
             'AND (backoff_until IS NULL OR backoff_until < ?) '
             'ORDER BY score DESC, last_verified ASC',
             (cutoff, utcnow()))
-        out = []
+        picked = []
         for r in rows:
             if not self._rule_blocked(r['url']):
-                out.append(r)
-                if len(out) >= quota:
+                picked.append(r['id'])
+                if len(picked) >= quota:
                     break
-        return out
+        if not picked:
+            return []
+        full = {}
+        for i in range(0, len(picked), 500):
+            chunk = picked[i:i + 500]
+            marks = ','.join('?' * len(chunk))
+            for row in self.db.query(
+                    'SELECT * FROM sources WHERE id IN (%s)' % marks, tuple(chunk)):
+                full[row['id']] = row
+        return [full[i] for i in picked if i in full]
 
 
     @staticmethod
