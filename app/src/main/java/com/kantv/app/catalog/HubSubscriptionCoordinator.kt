@@ -64,6 +64,10 @@ class HubSubscriptionCoordinator(
     ): HubRefreshOutcome = withContext(Dispatchers.IO) {
         val state = store.state()
         if (!HubRefreshPolicy.shouldRefresh(state, nowMs, force)) {
+            // 未到点不访问网络，但停播后的待应用订阅已经在本地，直接补上。
+            if (HubRefreshPolicy.shouldApplyPending(state, playbackActive)) {
+                applyDeferredIfAny(nowMs)?.let { return@withContext it }
+            }
             return@withContext HubRefreshOutcome.Skipped("NOT_DUE")
         }
         store.recordAttempt(nowMs)
@@ -75,7 +79,16 @@ class HubSubscriptionCoordinator(
         val outcome = client.fetch(ifNoneMatch = ifNoneMatch)
         val decision = HubRefreshPolicy.decide(outcome, playbackActive, supportedSchema)
         when (decision.action) {
-            HubApplyAction.KEEP_PREVIOUS -> keepPrevious(decision, outcome, nowMs)
+            HubApplyAction.KEEP_PREVIOUS -> {
+                val kept = keepPrevious(decision, outcome, nowMs)
+                // 304 / 失败都不带新正文。若播放已停、缓存里仍有未应用订阅，
+                // 这次响应不能把目录留在更旧的已应用版本上。
+                if (HubRefreshPolicy.shouldApplyPending(store.state(), playbackActive)) {
+                    applyDeferredIfAny(nowMs) ?: kept
+                } else {
+                    kept
+                }
+            }
             HubApplyAction.APPLY -> apply(decision, nowMs, countCatalog = true)
             HubApplyAction.DEFER_UNTIL_PLAYBACK_STOPPED -> apply(decision, nowMs, countCatalog = false)
         }
