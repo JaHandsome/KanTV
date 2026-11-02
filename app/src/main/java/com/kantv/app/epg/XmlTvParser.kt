@@ -47,9 +47,10 @@ internal object XmlTvParser {
     }
 
     private class Handler(private val requested: List<EpgChannelRef>) : DefaultHandler() {
-        private val feedChannels = mutableListOf<XmlTvChannel>()
         private val programmes = linkedMapOf<String, MutableList<EpgProgramme>>()
         private val matches = linkedMapOf<String, EpgChannelRef>()
+        private val heldProgrammes = linkedMapOf<String, MutableList<HeldProgramme>>()
+        private val seenChannelIds = HashSet<String>()
         private val chooseChannel = EpgChannelMatcher.prepare(requested)
         private val matchedIds = mutableSetOf<String>()
         private var channelId: String? = null
@@ -61,6 +62,7 @@ internal object XmlTvParser {
         private var subtitle: String? = null
         private var description: String? = null
         private val categories = mutableListOf<String>()
+        private var captureProgrammeText = false
         private var textElement: String? = null
         private val text = StringBuilder()
 
@@ -72,15 +74,24 @@ internal object XmlTvParser {
                 }
                 "programme" -> {
                     programmeChannelId = attributes.getValue("channel")?.trim()
-                    val relevant = matches.orEmpty().containsKey(programmeChannelId)
-                    programmeStartMs = if (relevant) parseXmlTvTime(attributes.getValue("start")) else null
-                    programmeEndMs = if (relevant) parseXmlTvTime(attributes.getValue("stop")) else null
+                    val feedId = programmeChannelId
+                    // A channel element that already failed to match will not match later.
+                    // Programmes that arrive before their channel still have to be kept.
+                    val knownMiss = feedId != null && feedId in seenChannelIds && feedId !in matches
+                    captureProgrammeText = feedId != null && !knownMiss
+                    textElement = null
+                    programmeStartMs = if (captureProgrammeText) parseXmlTvTime(attributes.getValue("start")) else null
+                    programmeEndMs = if (captureProgrammeText) parseXmlTvTime(attributes.getValue("stop")) else null
                     title = null
                     subtitle = null
                     description = null
                     categories.clear()
                 }
-                "display-name", "title", "sub-title", "desc", "category" -> {
+                "display-name" -> {
+                    textElement = "display-name"
+                    text.setLength(0)
+                }
+                "title", "sub-title", "desc", "category" -> if (captureProgrammeText) {
                     textElement = qName.lowercase(Locale.ROOT)
                     text.setLength(0)
                 }
@@ -101,8 +112,15 @@ internal object XmlTvParser {
             when (qName.lowercase(Locale.ROOT)) {
                 "display-name" -> if (channelId != null && value.isNotEmpty()) channelNames += value
                 "channel" -> channelId?.let { id ->
+                    seenChannelIds += id
                     val feed = XmlTvChannel(id, channelNames.toSet())
-                    chooseChannel(feed)?.takeIf { matchedIds.add(it.channelId) }?.let { matches[id] = it }
+                    val chosen = chooseChannel(feed)?.takeIf { matchedIds.add(it.channelId) }
+                    if (chosen != null) {
+                        matches[id] = chosen
+                        flushHeld(id, chosen)
+                    } else {
+                        heldProgrammes.remove(id)
+                    }
                     channelId = null
                 }
                 "title" -> if (value.isNotEmpty() && title == null) title = value
@@ -116,27 +134,65 @@ internal object XmlTvParser {
 
         private fun appendProgramme() {
             val feedId = programmeChannelId ?: return
-            val channel = matches.orEmpty()[feedId] ?: return
+            if (feedId in seenChannelIds && feedId !in matches) return
             val start = programmeStartMs ?: return
             val end = programmeEndMs ?: return
             val programmeTitle = title?.takeIf { it.isNotBlank() } ?: return
             if (end <= start) return
+            val categoriesSnapshot = categories.distinct()
+            val channel = matches[feedId]
+            if (channel == null) {
+                heldProgrammes.getOrPut(feedId) { mutableListOf() } += HeldProgramme(
+                    startMs = start,
+                    endMs = end,
+                    title = programmeTitle,
+                    subtitle = subtitle,
+                    description = description,
+                    categories = categoriesSnapshot,
+                )
+                return
+            }
+            addProgramme(channel, start, end, programmeTitle, subtitle, description, categoriesSnapshot)
+        }
+
+        private fun flushHeld(feedId: String, channel: EpgChannelRef) {
+            heldProgrammes.remove(feedId)?.forEach { item ->
+                addProgramme(
+                    channel,
+                    item.startMs,
+                    item.endMs,
+                    item.title,
+                    item.subtitle,
+                    item.description,
+                    item.categories,
+                )
+            }
+        }
+
+        private fun addProgramme(
+            channel: EpgChannelRef,
+            start: Long,
+            end: Long,
+            programmeTitle: String,
+            programmeSubtitle: String?,
+            programmeDescription: String?,
+            programmeCategories: List<String>,
+        ) {
             programmes.getOrPut(channel.channelId) { mutableListOf() } += EpgProgramme(
                 id = stableProgrammeId(channel.channelId, start, end, programmeTitle),
                 startAtMs = start,
                 endAtMs = end,
                 title = programmeTitle,
-                subtitle = subtitle,
-                description = description,
-                categories = categories.distinct(),
+                subtitle = programmeSubtitle,
+                description = programmeDescription,
+                categories = programmeCategories,
                 // XMLTV <url> is informational metadata, not a replay stream.
                 catchUpPlayback = null,
             )
         }
 
         fun result(): Map<String, EpgChannelSchedule> {
-            val finalMatches = matches ?: EpgChannelMatcher.match(requested, feedChannels)
-            return finalMatches.entries.mapNotNull { (feedId, channel) ->
+            return matches.entries.mapNotNull { (feedId, channel) ->
                 val items = programmes[channel.channelId].orEmpty()
                     .distinctBy { it.startAtMs to it.endAtMs }
                     .sortedBy { it.startAtMs }
@@ -144,6 +200,15 @@ internal object XmlTvParser {
             }.toMap(linkedMapOf())
         }
     }
+
+    private data class HeldProgramme(
+        val startMs: Long,
+        val endMs: Long,
+        val title: String,
+        val subtitle: String?,
+        val description: String?,
+        val categories: List<String>,
+    )
 
     private const val MAX_TEXT_CHARS = 32 * 1024
 
