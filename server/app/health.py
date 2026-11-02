@@ -113,9 +113,14 @@ class HealthMonitor(object):
     def on_check(self, source, alive, latency_ms, reason):
         """单源探活结果处理：health_checks 记录 + streak 更新 + 状态跃迁 + health_events。
 
-        P0 优化：全部写入合并为单次原子事务（原来 3-4 次独立 commit，
-        既产生多次 fsync，中断还会留下 streak 与 events 不一致）。
+        直接调用时自成一个事务。run() 把整轮放进同一个事务，并用 SAVEPOINT
+        把单源失败隔离开，避免一条坏写回滚其他源。
         """
+        with self.db.transaction() as conn:
+            self._apply_check(conn, source, alive, latency_ms, reason)
+
+    def _apply_check(self, conn, source, alive, latency_ms, reason):
+        """在调用方事务内写入单源探活结果。streak 取本轮读到的行，不回读库。"""
         now = utcnow()
         sid = source['id']
         h = self.cfg.settings['health']
@@ -126,47 +131,57 @@ class HealthMonitor(object):
         fail_streak = int(source['fail_streak'] or 0)
         ok_streak = int(source['ok_streak'] or 0)
 
-        with self.db.transaction() as conn:
-            conn.execute(
-                'INSERT INTO health_checks(source_id, ts, alive, latency_ms, reason) '
-                'VALUES (?,?,?,?,?)', (sid, now, 1 if alive else 0, latency_ms, reason))
+        conn.execute(
+            'INSERT INTO health_checks(source_id, ts, alive, latency_ms, reason) '
+            'VALUES (?,?,?,?,?)', (sid, now, 1 if alive else 0, latency_ms, reason))
 
-            if alive:
-                ok_streak += 1
-                fail_streak = 0
-                if status in ('flaky', 'dead') and ok_streak >= recover_at:
-                    conn.execute(
-                        "UPDATE sources SET status='active', ok_streak=?, fail_streak=0 WHERE id=?",
-                        (ok_streak, sid))
-                    conn.execute(
-                        'INSERT INTO health_events(source_id, ts, event, reason) VALUES (?,?,?,?)',
-                        (sid, now, 'online', '连续%d次探活恢复' % ok_streak))
-                    log.info('源 #%s %s -> active (%s)', sid, status, redact_url(source['url']))
-                else:
-                    conn.execute(
-                        'UPDATE sources SET ok_streak=?, fail_streak=0 WHERE id=?', (ok_streak, sid))
+        if alive:
+            ok_streak += 1
+            fail_streak = 0
+            if status in ('flaky', 'dead') and ok_streak >= recover_at:
+                conn.execute(
+                    "UPDATE sources SET status='active', ok_streak=?, fail_streak=0 WHERE id=?",
+                    (ok_streak, sid))
+                conn.execute(
+                    'INSERT INTO health_events(source_id, ts, event, reason) VALUES (?,?,?,?)',
+                    (sid, now, 'online', '连续%d次探活恢复' % ok_streak))
+                log.info('源 #%s %s -> active (%s)', sid, status, redact_url(source['url']))
             else:
-                fail_streak += 1
-                ok_streak = 0
-                if status == 'active' and fail_streak == flaky_at and flaky_at < dead_at:
-                    conn.execute(
-                        "UPDATE sources SET status='flaky', fail_streak=?, ok_streak=0 WHERE id=?",
-                        (fail_streak, sid))
-                    conn.execute(
-                        'INSERT INTO health_events(source_id, ts, event, reason) VALUES (?,?,?,?)',
-                        (sid, now, 'flaky', '连续%d次探活失败' % fail_streak))
-                    log.info('源 #%s active -> flaky (%s)', sid, redact_url(source['url']))
-                elif fail_streak >= dead_at and status != 'dead':
-                    conn.execute(
-                        "UPDATE sources SET status='dead', fail_streak=?, ok_streak=0 WHERE id=?",
-                        (fail_streak, sid))
-                    conn.execute(
-                        'INSERT INTO health_events(source_id, ts, event, reason) VALUES (?,?,?,?)',
-                        (sid, now, 'offline', '连续%d次探活失败' % fail_streak))
-                    log.info('源 #%s %s -> dead, 下线 (%s)', sid, status, redact_url(source['url']))
-                else:
-                    conn.execute(
-                        'UPDATE sources SET fail_streak=?, ok_streak=0 WHERE id=?', (fail_streak, sid))
+                conn.execute(
+                    'UPDATE sources SET ok_streak=?, fail_streak=0 WHERE id=?', (ok_streak, sid))
+        else:
+            fail_streak += 1
+            ok_streak = 0
+            if status == 'active' and fail_streak == flaky_at and flaky_at < dead_at:
+                conn.execute(
+                    "UPDATE sources SET status='flaky', fail_streak=?, ok_streak=0 WHERE id=?",
+                    (fail_streak, sid))
+                conn.execute(
+                    'INSERT INTO health_events(source_id, ts, event, reason) VALUES (?,?,?,?)',
+                    (sid, now, 'flaky', '连续%d次探活失败' % fail_streak))
+                log.info('源 #%s active -> flaky (%s)', sid, redact_url(source['url']))
+            elif fail_streak >= dead_at and status != 'dead':
+                conn.execute(
+                    "UPDATE sources SET status='dead', fail_streak=?, ok_streak=0 WHERE id=?",
+                    (fail_streak, sid))
+                conn.execute(
+                    'INSERT INTO health_events(source_id, ts, event, reason) VALUES (?,?,?,?)',
+                    (sid, now, 'offline', '连续%d次探活失败' % fail_streak))
+                log.info('源 #%s %s -> dead, 下线 (%s)', sid, status, redact_url(source['url']))
+            else:
+                conn.execute(
+                    'UPDATE sources SET fail_streak=?, ok_streak=0 WHERE id=?', (fail_streak, sid))
+
+    def _guarded(self, conn, fn, *args):
+        """一轮事务内隔离单次写入。失败只回滚该 SAVEPOINT，已写入的其他源保留。"""
+        conn.execute('SAVEPOINT probe_one')
+        try:
+            fn(*args)
+        except Exception:
+            conn.execute('ROLLBACK TO probe_one')
+            conn.execute('RELEASE probe_one')
+            raise
+        conn.execute('RELEASE probe_one')
 
     # ---------- 整轮熔断 ----------
     @staticmethod
@@ -185,8 +200,13 @@ class HealthMonitor(object):
         return True
 
     def _record_check(self, sid, alive, latency_ms, reason):
-        """熔断轮专用：仅追加 health_checks，不动状态机/事件/线路。"""
-        self.db.execute(
+        """熔断轮单条写入。run() 把整轮 health_checks 放进同一个事务。"""
+        with self.db.transaction() as conn:
+            self._insert_check(conn, sid, alive, latency_ms, reason)
+
+    def _insert_check(self, conn, sid, alive, latency_ms, reason):
+        """仅追加 health_checks，不动状态机/事件/线路。"""
+        conn.execute(
             'INSERT INTO health_checks(source_id, ts, alive, latency_ms, reason) '
             'VALUES (?,?,?,?,?)',
             (sid, utcnow(), 1 if alive else 0, latency_ms, reason))
@@ -439,14 +459,19 @@ class HealthMonitor(object):
                 bucket = grouped.setdefault(row['channel_key'], [])
                 if len(bucket) < max_lines:
                     bucket.append(row)
-        for key in channels:
-            cands = grouped.get(key) or []
-            self.db.execute('DELETE FROM lineups WHERE channel_key=?', (key,))
-            if cands:
-                self.db.executemany(
-                    'INSERT INTO lineups(channel_key, source_id, rank, updated_at) '
-                    'VALUES (?,?,?,?)',
-                    [(key, c['id'], i, now) for i, c in enumerate(cands)])
+        if not channels:
+            return
+        # 候选已在事务外读完。全部频道的 DELETE/INSERT 共用一次提交，
+        # 失败则整表重排回滚，已提交的探活结果不受影响。
+        with self.db.transaction() as conn:
+            for key in channels:
+                cands = grouped.get(key) or []
+                conn.execute('DELETE FROM lineups WHERE channel_key=?', (key,))
+                if cands:
+                    conn.executemany(
+                        'INSERT INTO lineups(channel_key, source_id, rank, updated_at) '
+                        'VALUES (?,?,?,?)',
+                        [(key, c['id'], i, now) for i, c in enumerate(cands)])
 
     # 探活只读这些列。整行里的 drm_key / 媒体快照不参与存活判定，
     # 每轮带上只会把内联密钥放进并发任务。
@@ -503,31 +528,39 @@ class HealthMonitor(object):
         if self._should_circuit_open(results):
             # 整轮网络不可达：只落 health_checks，冻结状态机/事件/线路，避免把
             # "本次整体断网"误判成每个源各自退化为 dead。
+            # 网络探测已结束，写库不再占着连接等 IO。整轮一次提交。
             log.warning('探活轮 %d: 整轮传输层失败(%d 源), 触发熔断', rnd, len(results))
-            for row, alive, latency, reason in results:
-                try:
-                    self._record_check(row['id'], alive, latency, reason)
-                except Exception as e:  # noqa: BLE001
-                    log.error('熔断结果写入异常 source=%s: %s', row['id'], redact_exc(e))
-                    continue
-                if alive:
-                    stats['alive'] += 1
-                else:
-                    stats['dead'] += 1
+            with self.db.transaction() as conn:
+                for row, alive, latency, reason in results:
+                    try:
+                        self._guarded(
+                            conn, self._insert_check, conn, row['id'], alive, latency, reason)
+                    except Exception as e:  # noqa: BLE001
+                        log.error('熔断结果写入异常 source=%s: %s', row['id'], redact_exc(e))
+                        continue
+                    if alive:
+                        stats['alive'] += 1
+                    else:
+                        stats['dead'] += 1
             stats['circuit_open'] = True
             log.info('探活轮 %d 完成(熔断): %s', rnd, stats)
             return stats
 
-        for row, alive, latency, reason in results:
-            try:
-                self.on_check(row, alive, latency, reason)
-            except Exception as e:  # noqa: BLE001
-                log.error('探活结果处理异常 source=%s: %s', row['id'], redact_exc(e))
-                continue
-            if alive:
-                stats['alive'] += 1
-            else:
-                stats['dead'] += 1
+        # 同上：探测结束后一次性提交。单源 SAVEPOINT 失败不影响其他源，
+        # 也不把线路重排卷进同一事务（重排失败时探活结果仍已落库）。
+        if results:
+            with self.db.transaction() as conn:
+                for row, alive, latency, reason in results:
+                    try:
+                        self._guarded(
+                            conn, self._apply_check, conn, row, alive, latency, reason)
+                    except Exception as e:  # noqa: BLE001
+                        log.error('探活结果处理异常 source=%s: %s', row['id'], redact_exc(e))
+                        continue
+                    if alive:
+                        stats['alive'] += 1
+                    else:
+                        stats['dead'] += 1
         # v10 吞吐探测：熔断轮不跑（网络整体不可达时测出来的吞吐无意义）；
         # 正常轮按 every_rounds 节流，在 rebuild_lineups 之前完成 score 折算
         h = self.cfg.settings['health']

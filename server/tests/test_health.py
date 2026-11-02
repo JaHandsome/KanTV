@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """health 单测：状态机跃迁 + 线路重排（FakeNet，全部离线）。"""
+import contextlib
 import os
 import shutil
 import ssl
@@ -444,6 +445,96 @@ class TestHealth(unittest.TestCase):
         n = len(calls)
         self.assertEqual(m._throughput_targets(), [])
         self.assertEqual(len(calls), n)
+
+    def _count_transactions(self, db):
+        calls = []
+        real = db.transaction
+
+        @contextlib.contextmanager
+        def wrapped():
+            calls.append(1)
+            with real() as conn:
+                yield conn
+
+        db.transaction = wrapped
+        return calls
+
+    def test_probe_round_writes_checks_and_lineups_in_two_transactions(self):
+        """正常轮：全部探活写入一次提交，线路重排另一次；单源失败不回滚其他源。"""
+        ok_id = self._add('http://x/batch-ok', score=20)
+        bad_id = self._add('http://x/batch-bad', score=10)
+        m = self._monitor(['http://x/batch-ok', 'http://x/batch-bad'])
+        calls = self._count_transactions(self.db)
+
+        def apply(conn, source, alive, latency, reason):
+            HealthMonitor._apply_check(m, conn, source, alive, latency, reason)
+            if source['id'] == bad_id:
+                raise RuntimeError('check write failed')
+
+        m._apply_check = apply
+        res = m.run()
+        self.assertEqual(len(calls), 2)
+        self.assertEqual(res['alive'], 1)
+        self.assertEqual(res['dead'], 0)
+        self.assertEqual(self._status(ok_id)['ok_streak'], 1)
+        self.assertEqual(self._status(bad_id)['ok_streak'], 0)
+        self.assertEqual(self.db.query_one(
+            'SELECT COUNT(*) AS c FROM health_checks WHERE source_id=?', (ok_id,))['c'], 1)
+        self.assertEqual(self.db.query_one(
+            'SELECT COUNT(*) AS c FROM health_checks WHERE source_id=?', (bad_id,))['c'], 0)
+        self.assertTrue(self._in_lineups(ok_id))
+        self.assertTrue(self._in_lineups(bad_id))
+
+    def test_circuit_round_writes_checks_in_one_transaction(self):
+        """熔断轮只开一次事务记 health_checks，不重排线路；单条失败不丢掉其余记录。"""
+        sids = [self._add('http://x/cirq%d' % i) for i in range(3)]
+        routes = {'http://x/cirq%d' % i: OSError('down') for i in range(3)}
+        m = self._monitor([], routes)
+        calls = self._count_transactions(self.db)
+        original_insert = m._insert_check
+
+        def insert(conn, sid, alive, latency, reason):
+            if sid == sids[1]:
+                conn.execute(
+                    'INSERT INTO health_checks(source_id, ts, alive, latency_ms, reason) '
+                    'VALUES (?,?,?,?,?)', (sid, '2020-01-01T00:00:00Z', 0, 1, 'x'))
+                raise RuntimeError('circuit write failed')
+            original_insert(conn, sid, alive, latency, reason)
+
+        m._insert_check = insert
+        res = m.run()
+        self.assertIs(res['circuit_open'], True)
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(res['dead'], 2)
+        self.assertEqual(self.db.query_one('SELECT COUNT(*) AS c FROM health_checks')['c'], 2)
+        self.assertEqual(self.db.query_one(
+            'SELECT COUNT(*) AS c FROM health_checks WHERE source_id=?', (sids[1],))['c'], 0)
+        for sid in sids:
+            self.assertEqual(self._status(sid)['fail_streak'], 0)
+            self.assertFalse(self._in_lineups(sid))
+
+    def test_lineup_transaction_failure_keeps_committed_checks(self):
+        """线路重排提交失败时，已经提交的探活结果保留。"""
+        sid = self._add('http://x/keep-check')
+        m = self._monitor(['http://x/keep-check'])
+        real = self.db.transaction
+        seen = {'n': 0}
+
+        @contextlib.contextmanager
+        def wrapped():
+            seen['n'] += 1
+            if seen['n'] == 2:
+                raise RuntimeError('lineup txn failed')
+            with real() as conn:
+                yield conn
+
+        self.db.transaction = wrapped
+        with self.assertRaises(RuntimeError):
+            m.run()
+        self.assertEqual(self._status(sid)['ok_streak'], 1)
+        self.assertEqual(self.db.query_one(
+            'SELECT COUNT(*) AS c FROM health_checks WHERE source_id=?', (sid,))['c'], 1)
+        self.assertFalse(self._in_lineups(sid))
 
 
 if __name__ == '__main__':
