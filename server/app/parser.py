@@ -23,6 +23,11 @@ _FW_DIGITS = str.maketrans('０１２３４５６７８９＋', '0123456789+')
 
 _CCTV_RE = re.compile(r'CCTV[-–—]?(\d{1,2})(\+?)')
 _HOST_RE = re.compile(r'https?://([^/]+)')
+_EXTINF_GROUP_RE = re.compile(r'group-title="([^"]*)"')
+_EXTINF_UA_RE = re.compile(r'http-user-agent="([^"]*)"')
+# 配置缺省时复用同一空对象，避免每次归一化都造一个新 list/dict 把缓存打穿。
+_NO_LIST = ()
+_NO_MAP = {}
 
 # #KODIPROP 关注键（inputstream.adaptive.*）-> 归一后的短键名。
 # 只认这三个；其余 KODIPROP（如 drm_type）与无关指令一律忽略，避免污染落库字段。
@@ -107,9 +112,9 @@ class ChannelParser(object):
         for line in text.splitlines():
             line = line.strip()
             if line.startswith('#EXTINF'):
-                m = re.search(r'group-title="([^"]*)"', line)
+                m = _EXTINF_GROUP_RE.search(line)
                 g = m.group(1) if m else ''
-                ua = re.search(r'http-user-agent="([^"]*)"', line)
+                ua = _EXTINF_UA_RE.search(line)
                 nm = line.split(',', 1)[-1].strip() if ',' in line else ''
                 pend = (nm, g, ua.group(1) if ua else None)
             elif line and not line.startswith('#') and pend is not None:
@@ -214,12 +219,11 @@ class ChannelParser(object):
             return ''
         n = str(name).strip().translate(_FW_DIGITS)
         n = _strip_quality_suffix(n)
-        targets = set(self.cfg.channels.get('channels') or [])
+        targets, aliases, weishi_ranked, alias_ranked = self._match_tables()
         if not targets:
             return ''
         if n in targets:
             return n
-        aliases = self.cfg.channels.get('aliases') or {}
         if n in aliases and aliases[n] in targets:
             return aliases[n]
         # CCTV 前缀归一：CCTV-5 / CCTV5+ / CCTV17农业 -> CCTV5 / CCTV5+ / CCTV17
@@ -231,15 +235,41 @@ class ChannelParser(object):
                 if k in targets:
                     return k
         # 卫视精确包含匹配（len 容差 +3，移植 revival_channels）
-        weishi = self.cfg.channels.get('weishi') or []
-        for w in sorted(weishi, key=len, reverse=True):
-            if w in n and len(n) <= len(w) + 3 and w in targets:
+        for w in weishi_ranked:
+            if w in n and len(n) <= len(w) + 3:
                 return w
         # 别名关键词兜底（如 翡翠台高清 -> TVB翡翠台）
-        for alias, key in sorted(aliases.items(), key=lambda kv: -len(kv[0])):
-            if alias in n and len(n) <= len(alias) + 4 and key in targets:
+        for alias, key in alias_ranked:
+            if alias in n and len(n) <= len(alias) + 4:
                 return key
         return ''
+
+    def _match_tables(self):
+        """频道表、别名、卫视名单的归一化索引。
+
+        发现入库对每条源都走 `_match`。公开配置约 100 个目标、100 个别名、
+        30 个卫视名；若每次都 `set()` 再按长度排序，大清单的开销在排序而不在匹配。
+        热加载用新对象整体替换 channels / aliases / weishi，按对象身份失效。
+        就地修改同一 list/dict 不会被看见，与 `_t2s_table` 同一约定。
+        """
+        channels = self.cfg.channels if isinstance(getattr(self.cfg, 'channels', None), dict) else _NO_MAP
+        targets_src = channels.get('channels') or _NO_LIST
+        aliases = channels.get('aliases') or _NO_MAP
+        weishi = channels.get('weishi') or _NO_LIST
+        cached = getattr(self, '_match_tables_cache', None)
+        if (cached is not None and cached[0] is targets_src
+                and cached[1] is aliases and cached[2] is weishi):
+            return cached[3]
+        targets = set(targets_src)
+        weishi_ranked = tuple(
+            w for w in sorted(weishi, key=len, reverse=True) if w in targets)
+        alias_ranked = tuple(
+            (alias, key)
+            for alias, key in sorted(aliases.items(), key=lambda kv: -len(kv[0]))
+            if key in targets)
+        tables = (targets, aliases, weishi_ranked, alias_ranked)
+        self._match_tables_cache = (targets_src, aliases, weishi, tables)
+        return tables
 
     def _t2s_table(self):
         """繁体->简体字符转换表（惰性构建 + 按映射对象身份缓存）。
