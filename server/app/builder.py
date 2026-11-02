@@ -61,18 +61,32 @@ class OutputBuilder(object):
         for r in rows:
             urls_by_key.setdefault(r['k'], []).append(r['url'])
 
+        # 回退：lineups 为空（或被 status/av 滤空）时一次取 sources，再按频道截断。
+        # 与原先逐频道 `ORDER BY score DESC, id ASC LIMIT max_lines` 同序、同名额；
+        # 这条 txt/m3u 路径不按 route 过滤，所以截断发生在取回之后、不先丢高分源。
+        missing = []
+        seen_missing = set()
         for key in channels:
-            if urls_by_key.get(key):
+            if urls_by_key.get(key) or max_lines <= 0 or key in seen_missing:
                 continue
-            # 回退：lineups 为空时直接按线路规则取 sources（同样加 profile 过滤，
-            # 否则冷启动会绕过投递隔离，见 FR-5 边界条件）
-            cands = self.db.query(
-                "SELECT url FROM sources WHERE channel_key=? AND status='active' "
-                "AND av LIKE 'video%%' AND profile IN (%s) "
-                "ORDER BY score DESC, id ASC LIMIT ?" % marks,
-                (key,) + tuple(profiles) + (max_lines,))
-            if cands:
-                urls_by_key[key] = [c['url'] for c in cands]
+            seen_missing.add(key)
+            missing.append(key)
+        if missing:
+            key_marks = ','.join('?' * len(missing))
+            rows = self.db.query(
+                'SELECT channel_key, url FROM sources WHERE channel_key IN (%s) '
+                "AND status='active' AND av LIKE 'video%%' AND profile IN (%s) "
+                'ORDER BY channel_key, score DESC, id ASC' % (key_marks, marks),
+                tuple(missing) + tuple(profiles))
+            grouped = {}
+            for r in rows:
+                bucket = grouped.setdefault(r['channel_key'], [])
+                if len(bucket) < max_lines:
+                    bucket.append(r['url'])
+            for key in missing:
+                picked = grouped.get(key)
+                if picked:
+                    urls_by_key[key] = picked
 
         order = {v: i for i, v in enumerate(self.cfg.channels.get('order') or [])}
         gidx = self.cfg.channels.get('group_index') or {}

@@ -287,19 +287,33 @@ class HealthMonitor(object):
         return 1, ratio, seg_duration, download_total, ''
 
     def _throughput_targets(self):
-        """每频道取 active+video+hls 按 score DESC 前 (lineups 名额+候补) 名的探测目标。"""
+        """每频道取 active+video+hls 按 score DESC 前 (lineups 名额+候补) 名的探测目标。
+
+        一次取回再按频道截断。返回顺序跟 channels 清单（重复键只留第一次），
+        与逐频道 LIMIT 后按清单拼接一致。limit<=0 不取目标。
+        """
         h = self.cfg.settings['health']
         extra = int(h.get('throughput_extra_candidates', 2))
         max_lines = int(self.cfg.settings['limits']['max_lines_per_channel'])
         limit = max_lines + extra
         channels = self.cfg.channels.get('channels') or []
-        seen = set()
+        grouped = {}
+        if channels and limit > 0:
+            unique = list(dict.fromkeys(channels))
+            marks = ','.join('?' * len(unique))
+            rows = self.db.query(
+                'SELECT * FROM sources WHERE channel_key IN (%s) '
+                "AND status='active' AND av LIKE 'video%%' AND container='hls' "
+                'ORDER BY channel_key, score DESC, id ASC' % marks,
+                tuple(unique))
+            for r in rows:
+                bucket = grouped.setdefault(r['channel_key'], [])
+                if len(bucket) < limit:
+                    bucket.append(r)
         targets = []
+        seen = set()
         for key in channels:
-            for r in self.db.query(
-                    "SELECT * FROM sources WHERE channel_key=? AND status='active' "
-                    "AND av LIKE 'video%' AND container='hls' "
-                    "ORDER BY score DESC, id ASC LIMIT ?", (key, limit)):
+            for r in grouped.get(key, ()):
                 if r['id'] in seen:
                     continue
                 seen.add(r['id'])
