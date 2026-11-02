@@ -667,9 +667,10 @@ class _RouteNet(object):
 
 
 class _MainThreadClock(object):
-    """只让主线程的 time.time() 计数，并在第 trigger_call 次跳到 big。
+    """只让主线程的单调钟计数，并在第 trigger_call 次跳到 big。
 
     Verifier.run 的预算检查在主线程；worker 的 t0/耗时读取在子线程一律返回 now。
+    time() 与 monotonic() 共用这一计数，旧桩替换整个 time 模块时两条路径一致。
     由此可确定性地"收齐 3 条结果后超时"，不依赖真实等待。
     """
 
@@ -686,6 +687,9 @@ class _MainThreadClock(object):
             if self.main_calls >= self.trigger_call:
                 return self.big
         return self.now
+
+    def monotonic(self):
+        return self.time()
 
 
 class TestBatchCircuitBreaker(unittest.TestCase):
@@ -793,6 +797,60 @@ class TestBatchCircuitBreaker(unittest.TestCase):
         self.assertEqual(self._verifications(), 3)
         for sid in sids:
             self.assertEqual(self._source(sid)['fail_streak'], 1)
+
+    def test_wall_clock_jump_does_not_expire_verify_budget(self):
+        """墙上时钟前跳不得提前用完验证预算；预算按单调钟走。"""
+        urls = ['http://x/jump%d.m3u8' % i for i in range(4)]
+        for url in urls:
+            _insert(self.db, url)
+        self.cfg.settings['limits']['verify_budget_min'] = 1
+        main = threading.current_thread()
+        wall_calls = [0]
+
+        def wall_time():
+            if threading.current_thread() is main:
+                wall_calls[0] += 1
+                if wall_calls[0] >= 2:
+                    return 1_010_000.0
+            return 1_000_000.0
+
+        routes = {url: HTTPError(url, 404, 'nf', {}, None) for url in urls}
+        with mock.patch('app.verifier.time.time', side_effect=wall_time), \
+                mock.patch('app.verifier.time.monotonic', return_value=5_000.0):
+            res = self._run(routes)
+        self.assertIs(res['timeout'], False)
+        self.assertEqual(self._verifications(), 4)
+        self.assertEqual(res['fail'], 4)
+
+    def test_verify_budget_expires_on_monotonic_clock_when_wall_steps_back(self):
+        """单调钟走完预算就必须停；墙上时钟回拨不能把预算重新撑开。"""
+        urls = ['http://x/back%d.m3u8' % i for i in range(4)]
+        for url in urls:
+            _insert(self.db, url)
+        self.cfg.settings['limits']['verify_budget_min'] = 1
+        main = threading.current_thread()
+        mono_calls = [0]
+
+        def mono_time():
+            if threading.current_thread() is main:
+                mono_calls[0] += 1
+                if mono_calls[0] >= 2:
+                    return 1_120.0
+            return 1_000.0
+
+        def wall_time():
+            if threading.current_thread() is main and mono_calls[0] >= 1:
+                return 900_000.0
+            return 1_000_000.0
+
+        routes = {url: HTTPError(url, 404, 'nf', {}, None) for url in urls}
+        with mock.patch('app.verifier.time.time', side_effect=wall_time), \
+                mock.patch('app.verifier.time.monotonic', side_effect=mono_time):
+            res = self._run(routes)
+        self.assertIs(res['timeout'], True)
+        self.assertIs(res['circuit_open'], False)
+        self.assertEqual(self._verifications(), 1)
+        self.assertEqual(res['fail'], 1)
 
     def test_timeout_blocks_circuit(self):
         """mock 时钟：收齐 3 条传输失败后超时 -> 谓词为真但完整性门禁拒绝熔断。"""
