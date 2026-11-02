@@ -1,9 +1,10 @@
 package com.kantv.app.catalog
 
+import com.kantv.app.util.openableHttpUrl
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.net.HttpURLConnection
-import java.net.URL
+import java.net.MalformedURLException
 
 /** Errors which can safely be persisted as refresh state without retaining a URL or exception text. */
 sealed class PlaylistLoadException : IOException() {
@@ -13,7 +14,8 @@ sealed class PlaylistLoadException : IOException() {
 
 class PlaylistLoader {
     fun fromUrl(url: String): String {
-        val connection = (URL(url).openConnection() as HttpURLConnection).apply {
+        val target = openableHttpUrl(url) ?: throw MalformedURLException("invalid url")
+        val connection = (target.openConnection() as HttpURLConnection).apply {
             connectTimeout = 8_000
             readTimeout = 15_000
             instanceFollowRedirects = false

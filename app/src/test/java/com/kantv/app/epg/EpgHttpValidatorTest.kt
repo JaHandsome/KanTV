@@ -4,6 +4,7 @@ import com.kantv.app.util.cacheValidator
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.net.InetAddress
@@ -55,6 +56,23 @@ class EpgHttpValidatorTest {
         assertFalse(requests[0].contains("X-Injected"))
         assertTrue(requests[1].contains("If-None-Match: \"good\""))
         assertTrue(requests[1].contains("If-Modified-Since: Wed, 21 Oct 2015 07:28:00 GMT"))
+    }
+
+    @Test fun unsafeUrlsDoNotOpenAConnection() {
+        ServerSocket(0, 1, InetAddress.getByName("127.0.0.1")).use { server ->
+            server.soTimeout = 300
+            val client = UrlConnectionEpgHttpClient()
+            val injected = client.fetch(
+                "http://127.0.0.1:${server.localPort}/guide.xml\r\nX-Injected: yes",
+                null,
+                null,
+            )
+            val local = client.fetch("file:///etc/passwd", null, null)
+            assertTrue(injected is EpgHttpResult.Failed)
+            assertEquals(EpgFailureCode.NETWORK, (injected as EpgHttpResult.Failed).code)
+            assertEquals(EpgFailureCode.NETWORK, (local as EpgHttpResult.Failed).code)
+            assertThrows(java.net.SocketTimeoutException::class.java) { server.accept() }
+        }
     }
 
     private fun readHeaders(socket: Socket): String {
