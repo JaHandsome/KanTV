@@ -77,6 +77,21 @@ class _StubNet(object):
         return self.body
 
 
+class _FlakyNet(_StubNet):
+    """第一次拉取失败，之后返回正文。"""
+
+    def __init__(self, body):
+        _StubNet.__init__(self, body)
+        self._failed = False
+
+    def fetch_retry(self, url, ua=None, limit=None, timeout=None, retries=None, backoff=None):
+        self.calls.append(('fetch_retry', url))
+        if not self._failed:
+            self._failed = True
+            raise OSError('temporary')
+        return self.body
+
+
 def _copy_config(root):
     write_test_config(root)
 
@@ -129,8 +144,12 @@ class TestUrlListProvider(unittest.TestCase):
         self.tmp = tempfile.mkdtemp(prefix='iptv-urllist-')
         _copy_config(self.tmp)
         self.cfg = Config(self.tmp)
+        from app import discovery
+        discovery._URL_LIST_LAST_FETCH.clear()
 
     def tearDown(self):
+        from app import discovery
+        discovery._URL_LIST_LAST_FETCH.clear()
         shutil.rmtree(self.tmp, ignore_errors=True)
 
     def _lists(self, lst):
@@ -163,6 +182,24 @@ class TestUrlListProvider(unittest.TestCase):
         self.assertEqual(bad['container'], 'dash')          # container 非 DRM 信息，保留
         for k in ('drm', 'kid', 'drm_key', 'caps_required'):
             self.assertNotIn(k, bad)                         # 坏 JSON -> 不带 DRM 字段
+
+    def test_failed_fetch_does_not_start_refresh_window(self):
+        """一次拉取失败不能占掉 refresh_minutes，下一轮还要再拉。"""
+        net = _FlakyNet(FAKE_M3U.encode())
+        self._lists([{'id': 'x', 'url': 'http://list/x.m3u', 'enabled': True,
+                      'refresh_minutes': 360}])
+        self.assertEqual(UrlListProvider(self.cfg, net).collect(), [])
+        out = UrlListProvider(self.cfg, net).collect()
+        self.assertEqual(len(net.calls), 2)
+        self.assertEqual(len(out), 1)
+
+    def test_successful_fetch_still_honors_refresh_window(self):
+        net = _StubNet(FAKE_M3U.encode())
+        self._lists([{'id': 'x', 'url': 'http://list/x.m3u', 'enabled': True,
+                      'refresh_minutes': 360}])
+        self.assertEqual(len(UrlListProvider(self.cfg, net).collect()), 1)
+        self.assertEqual(UrlListProvider(self.cfg, net).collect(), [])
+        self.assertEqual(len(net.calls), 1)
 
 
 # --------------------------- ingest 透传 + 签名轮换刷新 ---------------------------
