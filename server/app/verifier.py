@@ -1130,7 +1130,27 @@ class Verifier(object):
         return v if isinstance(v, dict) else {}
 
     def record(self, source, result, duration_ms):
-        """单条验证结果落库：verifications + sources 更新（P0 R3 六分类）。
+        """单条验证结果落库。verifications 与 sources 更新同一次提交。
+
+        run() 不走这里：整批共用一个事务，单条失败用 SAVEPOINT 隔开。
+        """
+        with self.db.transaction() as conn:
+            return self._apply_record(conn, source, result, duration_ms)
+
+    def _guarded_record(self, conn, source, result, duration_ms):
+        """批事务内隔离单条落库。失败只回滚该条，已写入的其他源保留。"""
+        conn.execute('SAVEPOINT verify_one')
+        try:
+            verdict = self._apply_record(conn, source, result, duration_ms)
+        except Exception:
+            conn.execute('ROLLBACK TO verify_one')
+            conn.execute('RELEASE verify_one')
+            raise
+        conn.execute('RELEASE verify_one')
+        return verdict
+
+    def _apply_record(self, conn, source, result, duration_ms):
+        """在调用方事务内落库一条验证结果（P0 R3 六分类）。
 
         判定优先级（FR-3/FR-4）：
           1) scheme 不支持 -> unsupported（status='unsupported'，永久）；
@@ -1199,7 +1219,7 @@ class Verifier(object):
             effective, self._client_caps())
         caps_json = json.dumps(caps_required, sort_keys=True)
 
-        self.db.execute(
+        conn.execute(
             'INSERT INTO verifications(source_id, ts, result, av, note, duration_ms) '
             'VALUES (?,?,?,?,?,?)',
             (source['id'], now, verdict, av, note, duration_ms))
@@ -1212,26 +1232,26 @@ class Verifier(object):
 
         if verdict == 'ok':
             # 视频已验证 -> 上线；audio-only/不稳定/未判定保持 candidate（不占线路位）
-            self.db.execute(
+            conn.execute(
                 "UPDATE sources SET av=?, status='active', profile=?, last_verified=?, "
                 'ok_streak=0, fail_streak=0, backoff_until=NULL, ' + cols + ' WHERE id=?',
                 (av, profile, now) + ok_tail + (source['id'],))
             log.info('源 #%s 验证通过 -> active (%s)', source['id'], redact_url(source['url']))
         elif verdict == 'unsupported':
-            self.db.execute(
+            conn.execute(
                 "UPDATE sources SET status='unsupported', av=?, last_verified=?, "
                 'backoff_until=NULL, ' + cols + ' WHERE id=?',
                 (av, now) + tail + (source['id'],))
             log.info('源 #%s scheme 不支持 -> unsupported (%s)', source['id'], verdict_reason)
         elif verdict in ('need_key', 'need_client_cap'):
-            self.db.execute(
+            conn.execute(
                 "UPDATE sources SET status='drm', profile=?, av=?, last_verified=?, "
                 'backoff_until=NULL, ' + cols + ' WHERE id=?',
                 (profile, av, now) + tail + (source['id'],))
             log.info('源 #%s 加密待处理 -> drm/%s (%s)',
                      source['id'], profile, verdict_reason)
         elif verdict == 'abnormal':
-            self.db.execute(
+            conn.execute(
                 'UPDATE sources SET av=?, last_verified=?, backoff_until=NULL, ' + cols
                 + ' WHERE id=?',
                 (av, now) + tail + (source['id'],))
@@ -1250,7 +1270,7 @@ class Verifier(object):
             elif streak >= 2:
                 hours = BACKOFF_DAYS[min(streak - 2, len(BACKOFF_DAYS) - 1)] * 24
             until = iso_plus_hours(hours) if hours else None
-            self.db.execute(
+            conn.execute(
                 'UPDATE sources SET av=?, last_verified=?, fail_streak=?, backoff_until=?, '
                 + cols + ' WHERE id=?',
                 (av, now, streak, until)
@@ -1557,14 +1577,17 @@ class Verifier(object):
             log.info('验证轮完成(熔断): %s', stats)
             return stats
 
-        # 非熔断：对已收集结果按原逻辑逐条 record；单条落库失败不中断。
-        for row, result, dur in results:
-            try:
-                verdict = self.record(row, result, dur)
-            except Exception as e:  # noqa: BLE001 - 单条落库失败不中断
-                log.error('验证结果落库失败 source=%s: %s', row['id'], redact_exc(e))
-                continue
-            if verdict in stats:
-                stats[verdict] += 1
+        # 非熔断：探测已结束。整批 verifications + sources 一次提交。
+        # 单条 SAVEPOINT 失败不回滚其他源，也不中断本批。
+        if results:
+            with self.db.transaction() as conn:
+                for row, result, dur in results:
+                    try:
+                        verdict = self._guarded_record(conn, row, result, dur)
+                    except Exception as e:  # noqa: BLE001 - 单条落库失败不中断
+                        log.error('验证结果落库失败 source=%s: %s', row['id'], redact_exc(e))
+                        continue
+                    if verdict in stats:
+                        stats[verdict] += 1
         log.info('验证轮完成: %s', stats)
         return stats
