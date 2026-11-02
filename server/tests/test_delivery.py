@@ -408,6 +408,16 @@ class TestCollectDeliverableLinesSharedLeaf(unittest.TestCase):
         self.assertEqual([r['url'] for r in out['CCTV1']],
                          ['http://x/a.m3u8', 'http://x/b.m3u8'])
 
+    def test_未排满且路由都有效时保持lineup次序(self):
+        # rank 与当前分数相反，max_lines 还有空位。不得按分数重排，
+        # 也不得把 lineups 之外的源插到健康度排好的线路前面。
+        self._lineup('CCTV1', self._add('http://x/preferred.m3u8', 'CCTV1', score=1), 0)
+        self._lineup('CCTV1', self._add('http://x/other.m3u8', 'CCTV1', score=50), 1)
+        self._add('http://x/outside.m3u8', 'CCTV1', score=80)
+        out = collect_deliverable_lines(self.db, ['CCTV1'], 3)
+        self.assertEqual([r['url'] for r in out['CCTV1']],
+                         ['http://x/preferred.m3u8', 'http://x/other.m3u8'])
+
     def test_lineups被无效route占名额时仍补满有效源(self):
         # max_lines 个 lineups 里夹着无效 route，过滤后只剩一条。
         # 名额之外的有效源必须补上，并按分数而不是残缺 rank 排序。
