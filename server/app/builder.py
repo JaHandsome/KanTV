@@ -16,7 +16,7 @@ import time
 
 from app.db import DELIVERABLE_PROFILES, utcnow
 from app.delivery import (collect_deliverable_lines, deliverable_container,
-                          parse_clearkey)
+                          lineup_slot_counts, parse_clearkey)
 from app.logutil import get_logger
 
 log = get_logger('builder')
@@ -39,9 +39,9 @@ class OutputBuilder(object):
     def _collect_items(self, profiles=('direct',)):
         """收集每频道线路 -> 排序后的 [{name, cat, urls}]（P0 R5 投递隔离）。
 
-        lineups 为主数据源。冷启动没有 lineups，或其它 profile 占满名额后 direct
-        不足 max_lines 时，按分数补 sources；已经入选的直链保持 rank。
-        健康度只排了不到 max_lines 条时不补，避免打乱既有次序。两处均按同一口径过滤：
+        lineups 为主数据源。冷启动没有 lineups，或快照行数已到 max_lines 但 direct
+        不足（其它 profile、死线占着名额）时，按分数补 sources；已经入选的直链保持
+        rank。快照没排满时不补，避免打乱既有次序。两处均按同一口径过滤：
         status='active' AND av LIKE 'video%'（lineups 只是重排快照，源被判 dead/flaky
         或改判音频后、下一轮 rebuild_lineups 之前的窗口期内不得投递，见 delivery.py）；
         NULL 视为不匹配（profile 迁移已回填，回填缺失时由 status._data_invariant 告警；av NULL 正常流程不会以 active 态出现，见 186fa0e reviewer 复核记录）。
@@ -53,7 +53,7 @@ class OutputBuilder(object):
         marks = ','.join('?' * len(profiles))
 
         urls_by_key = {}
-        raw_count = {}
+        slot_count = lineup_slot_counts(self.db, channels) if max_lines > 0 else {}
         allowed = set(profiles)
         # 先看全部 profile 的 lineups，才能分辨「名额被其它画像占满」和「本来就没排满」。
         rows = self.db.query(
@@ -62,12 +62,12 @@ class OutputBuilder(object):
             "WHERE s.status='active' AND s.av LIKE 'video%%' "
             'ORDER BY l.channel_key, l.rank')
         for r in rows:
-            raw_count[r['k']] = raw_count.get(r['k'], 0) + 1
             if r['profile'] in allowed:
                 urls_by_key.setdefault(r['k'], []).append(r['url'])
 
-        # 回退补 sources：没有 lineups，或 lineups 已排满但 direct 被滤短。
-        # 已入选直链保持 rank，只追加还没出现的 URL。未排满的频道不补。
+        # 回退补 sources：没有 lineups，或快照已满但 direct 被滤短。
+        # 已入选直链保持 rank，只追加还没出现的 URL。没排满的频道不补。
+        # 名额按 lineups 表行数计，死线也占名额。
         short = []
         seen_short = set()
         for key in channels:
@@ -76,8 +76,7 @@ class OutputBuilder(object):
             have = urls_by_key.get(key) or []
             if len(have) >= max_lines:
                 continue
-            ranked = raw_count.get(key, 0)
-            if have and ranked < max_lines:
+            if have and slot_count.get(key, 0) < max_lines:
                 continue
             seen_short.add(key)
             short.append(key)

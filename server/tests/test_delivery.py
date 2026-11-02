@@ -464,6 +464,17 @@ class TestCollectDeliverableLinesSharedLeaf(unittest.TestCase):
         out = collect_deliverable_lines(self.db, ['CCTV1'], 2)
         self.assertEqual([r['url'] for r in out['CCTV1']], ['http://x/ok.m3u8'])
 
+    def test_死线占满快照时仍补上其它活线(self):
+        # 探活把第一名判死之后、重排之前，名额不能空着。
+        # 没排满的全有效快照仍不把线外源插进来，这条快照是满的。
+        self._lineup('CCTV1', self._add('http://x/dead.m3u8', 'CCTV1',
+                                        status='dead', score=99), 0)
+        self._lineup('CCTV1', self._add('http://x/low.m3u8', 'CCTV1', score=5), 1)
+        self._add('http://x/live.m3u8', 'CCTV1', score=50)
+        out = collect_deliverable_lines(self.db, ['CCTV1'], 2)
+        self.assertEqual([r['url'] for r in out['CCTV1']],
+                         ['http://x/live.m3u8', 'http://x/low.m3u8'])
+
     def test_lineups全被status_av过滤时回退sources抓活线(self):
         """窗口期退化场景：lineups 里全是 dead/音频源 -> 过滤后无合格 lineups
         必须回退 sources（同口径谓词），把仍 active+video 的源投出去。"""
