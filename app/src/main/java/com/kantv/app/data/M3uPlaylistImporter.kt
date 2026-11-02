@@ -184,8 +184,15 @@ private object M3uParser {
         return listOfNotNull(attributes["x-tvg-url"], attributes["url-tvg"])
             .flatMap { it.split(Regex("[\\s,]+")) }
             .map { it.trim() }
-            .filter { it.isNotEmpty() }
+            .filter { epgUrlAllowed(it) }
             .distinct()
+    }
+
+    private fun epgUrlAllowed(value: String): Boolean {
+        if (value.any { it == '\r' || it == '\n' || it == '\u0000' }) return false
+        val uri = runCatching { URI(value) }.getOrNull() ?: return false
+        val scheme = uri.scheme?.lowercase(Locale.ROOT) ?: return false
+        return scheme in setOf("http", "https") && !uri.host.isNullOrBlank()
     }
 
     private fun parseExtInf(line: String): PendingChannel? {
@@ -200,8 +207,8 @@ private object M3uParser {
         val separator = value.indexOf('=')
         if (separator < 1) return
         when (value.substring(0, separator).trim().lowercase(Locale.ROOT)) {
-            "http-user-agent" -> headers["User-Agent"] = value.substring(separator + 1).trim()
-            "http-referrer" -> headers["Referer"] = value.substring(separator + 1).trim()
+            "http-user-agent" -> putSafeHeader(headers, "User-Agent", value.substring(separator + 1))
+            "http-referrer" -> putSafeHeader(headers, "Referer", value.substring(separator + 1))
         }
     }
 
@@ -216,8 +223,8 @@ private object M3uParser {
                 val split = pair.indexOf('=')
                 if (split < 1) return@forEach
                 when (pair.substring(0, split).trim().lowercase(Locale.ROOT)) {
-                    "user-agent" -> headers["User-Agent"] = decodeSuffixValue(pair.substring(split + 1).trim())
-                    "referer" -> headers["Referer"] = decodeSuffixValue(pair.substring(split + 1).trim())
+                    "user-agent" -> putSafeHeader(headers, "User-Agent", decodeSuffixValue(pair.substring(split + 1)))
+                    "referer" -> putSafeHeader(headers, "Referer", decodeSuffixValue(pair.substring(split + 1)))
                 }
             }
         return StreamRequest(baseUrl, headers.toMap())
@@ -229,11 +236,22 @@ private object M3uParser {
         value
     }
 
-    private fun looksLikeUrl(value: String): Boolean = try {
-        val uri = URI(value)
-        uri.scheme?.matches(Regex("[A-Za-z][A-Za-z0-9+.-]*")) == true
-    } catch (_: Exception) {
-        false
+    private fun putSafeHeader(headers: MutableMap<String, String>, name: String, raw: String) {
+        val value = raw.trim()
+        if (value.isEmpty() || value.any { it == '\r' || it == '\n' || it == '\u0000' }) return
+        headers[name] = value
+    }
+
+    /**
+     * Remote and multicast IPTV schemes only. file/content/javascript/intent/data would be
+     * opened by the player as local resources.
+     */
+    private val playableSchemes = setOf("http", "https", "udp", "rtp", "rtsp", "rtmp")
+
+    private fun looksLikeUrl(value: String): Boolean {
+        if (value.any { it == '\r' || it == '\n' || it == '\u0000' }) return false
+        val scheme = runCatching { URI(value).scheme }.getOrNull()?.lowercase(Locale.ROOT) ?: return false
+        return scheme in playableSchemes
     }
 
     private fun parseAttributes(text: String): Map<String, String> {

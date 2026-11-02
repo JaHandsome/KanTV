@@ -1,22 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application>
+        <!-- adb shell can still start these. Other apps must not. -->
         <activity
             android:name=".debug.GeckoNativeTraceLiveStartupActivity"
-            android:exported="true"
+            android:exported="false"
             android:screenOrientation="landscape" />
         <activity
             android:name=".debug.GeckoNativeTraceDebugProbeActivity"
-            android:exported="true"
+            android:exported="false"
             android:process=":nativeTraceProbe"
             android:screenOrientation="landscape" />
         <activity
             android:name=".debug.GeckoAvDebugProbeActivity"
-            android:exported="true"
+            android:exported="false"
             android:screenOrientation="landscape" />
         <activity
             android:name=".debug.M3uAvDebugProbeActivity"
-            android:exported="true"
+            android:exported="false"
             android:screenOrientation="landscape" />
     </application>
 </manifest>

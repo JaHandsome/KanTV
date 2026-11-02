@@ -41,7 +41,7 @@ from app.db import (DELIVERABLE_PROFILES, FREEZE_FIELDS,  # noqa: F401
 from app.delivery import (CAPS_ENUM, ROUTE_ENUM, ROUTE_EXCLUDED,  # noqa: F401
                           collect_deliverable_lines, deliverable_container,
                           media3_deliverable_route, parse_clearkey, route_of)
-from app.logutil import get_logger
+from app.logutil import get_logger, redact_url
 from app.parser import ChannelParser
 
 log = get_logger('hub')
@@ -220,7 +220,7 @@ class Hub(object):
             url_key = ChannelParser.url_key(
                 url, ChannelParser.resolve_signed_params(url, self.cfg.settings))
             log.info('hub: url_key 缺失或非法，已现场补算 channel=%s url_key=%s url=%s',
-                     row.get('k'), url_key, url[:80])
+                     row.get('k'), url_key, redact_url(url))
         entry = {
             'route': route,
             'url': url,

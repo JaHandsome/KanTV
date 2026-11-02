@@ -28,7 +28,7 @@ import urllib.request
 from urllib.parse import quote, urljoin, urlparse, urlsplit, urlunparse
 
 from app.config import _compile_private_source_origins
-from app.logutil import get_logger
+from app.logutil import get_logger, redact_url
 
 log = get_logger('net')
 
@@ -131,16 +131,16 @@ def _validate_url(url):
     if scheme not in _ALLOWED_SCHEMES:
         raise NetPolicyError('unsupported URL scheme: %r' % (parts.scheme,))
     if '@' in parts.netloc:
-        raise NetPolicyError('userinfo is not allowed in URL: %r' % (url,))
+        raise NetPolicyError('userinfo is not allowed in URL: %s' % (redact_url(url),))
     host = parts.hostname
     if not host:
-        raise NetPolicyError('URL host is empty: %r' % (url,))
+        raise NetPolicyError('URL host is empty: %s' % (redact_url(url),))
     try:
         port = parts.port
     except ValueError:
-        raise NetPolicyError('URL port is invalid: %r' % (url,)) from None
+        raise NetPolicyError('URL port is invalid: %s' % (redact_url(url),)) from None
     if port is not None and not (0 < port <= 65535):
-        raise NetPolicyError('URL port out of range: %r' % (url,))
+        raise NetPolicyError('URL port out of range: %s' % (redact_url(url),))
     return scheme, host, port
 
 

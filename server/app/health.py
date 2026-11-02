@@ -20,7 +20,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from urllib.parse import urljoin
 
 from app.db import utcnow
-from app.logutil import get_logger
+from app.logutil import get_logger, redact_url
 from app.net import NetBodyLimitError
 from app.throughput import (THROUGHPUT_FAIL_RATIO, THROUGHPUT_REALTIME_RATIO,
                             is_transport_reason, throughput_window_factor)
@@ -141,7 +141,7 @@ class HealthMonitor(object):
                     conn.execute(
                         'INSERT INTO health_events(source_id, ts, event, reason) VALUES (?,?,?,?)',
                         (sid, now, 'online', '连续%d次探活恢复' % ok_streak))
-                    log.info('源 #%s %s -> active (%s)', sid, status, source['url'][:60])
+                    log.info('源 #%s %s -> active (%s)', sid, status, redact_url(source['url']))
                 else:
                     conn.execute(
                         'UPDATE sources SET ok_streak=?, fail_streak=0 WHERE id=?', (ok_streak, sid))
@@ -155,7 +155,7 @@ class HealthMonitor(object):
                     conn.execute(
                         'INSERT INTO health_events(source_id, ts, event, reason) VALUES (?,?,?,?)',
                         (sid, now, 'flaky', '连续%d次探活失败' % fail_streak))
-                    log.info('源 #%s active -> flaky (%s)', sid, source['url'][:60])
+                    log.info('源 #%s active -> flaky (%s)', sid, redact_url(source['url']))
                 elif fail_streak >= dead_at and status != 'dead':
                     conn.execute(
                         "UPDATE sources SET status='dead', fail_streak=?, ok_streak=0 WHERE id=?",
@@ -163,7 +163,7 @@ class HealthMonitor(object):
                     conn.execute(
                         'INSERT INTO health_events(source_id, ts, event, reason) VALUES (?,?,?,?)',
                         (sid, now, 'offline', '连续%d次探活失败' % fail_streak))
-                    log.info('源 #%s %s -> dead, 下线 (%s)', sid, status, source['url'][:60])
+                    log.info('源 #%s %s -> dead, 下线 (%s)', sid, status, redact_url(source['url']))
                 else:
                     conn.execute(
                         'UPDATE sources SET fail_streak=?, ok_streak=0 WHERE id=?', (fail_streak, sid))

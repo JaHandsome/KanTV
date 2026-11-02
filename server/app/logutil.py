@@ -13,8 +13,10 @@ P1-A 审计增强：轮转扩容 10MB -> 16MB（当前 + 5 个轮转副本 = 96M
 """
 import logging
 import os
+import re
 import sys
 from logging.handlers import RotatingFileHandler
+from urllib.parse import urlsplit
 
 _LOG_FILE = 'iptv-nas.log'
 _MAX_BYTES = 16 * 1024 * 1024   # 16MB（P1-A 扩容：原 10MB）
@@ -50,3 +52,43 @@ def setup_logging(log_dir, level=logging.INFO):
 def get_logger(name):
     """按模块名取 logger（discovery/verifier/health/builder/scheduler/http）。"""
     return logging.getLogger(name)
+
+
+_REDACTED_URL = '<redacted-url>'
+_MAX_LOG_PATH = 120
+_URL_IN_TEXT = re.compile(r'https?://[^\s\'\"<>]+', re.IGNORECASE)
+
+
+def redact_url(url):
+    """日志用的 URL：只保留 scheme、host、port、path。
+
+    签名直播地址把 token / securitykey / sign / expires 放在 query 里。
+    这些值不能进入轮转日志。userinfo 与 fragment 同样丢弃。无法解析、
+    或含换行/NUL 的输入返回固定占位，避免把原文写进日志。
+    """
+    if not isinstance(url, str) or not url or any(ch in url for ch in '\r\n\x00'):
+        return _REDACTED_URL
+    try:
+        parts = urlsplit(url.strip())
+        host = parts.hostname
+        port = parts.port
+    except ValueError:
+        return _REDACTED_URL
+    scheme = (parts.scheme or '').lower()
+    if scheme not in ('http', 'https', 'udp', 'rtp', 'rtsp', 'rtmp') or not host:
+        return _REDACTED_URL
+    if ':' in host:
+        host = '[%s]' % host
+    netloc = host if port is None else '%s:%d' % (host, port)
+    path = parts.path or ''
+    if len(path) > _MAX_LOG_PATH:
+        path = path[:_MAX_LOG_PATH] + '...'
+    return '%s://%s%s' % (scheme, netloc, path)
+
+
+def redact_text(value):
+    """把文本里的 http(s) URL 换成 redact_url 的结果，再交给日志。"""
+    text = value if isinstance(value, str) else str(value)
+    if not text:
+        return text
+    return _URL_IN_TEXT.sub(lambda match: redact_url(match.group(0)), text)

@@ -65,6 +65,35 @@ class M3uPlaylistImporterTest {
         assertTrue(prepared.summary.issueCodes.contains(ImportIssue.UNEXPECTED_CONTENT))
     }
 
+    @Test fun rejectsLocalSchemesAndHeaderInjectionButKeepsMulticast() {
+        val prepared = importer.prepare(
+            """
+            #EXTM3U url-tvg="file:///tmp/epg.xml https://epg.example/ok.xml javascript:alert(1)"
+            #EXTINF:-1,注入
+            #EXTVLCOPT:http-referrer=https://ok.example/page
+            https://stream.example/live|User-Agent=Agent%0d%0aX-Injected:%201&Referer=https%3A%2F%2Fkept.example%2F
+            #EXTINF:-1,本地文件
+            file:///data/data/com.kantv.app/databases/catalog.db
+            #EXTINF:-1,内容提供者
+            content://media/external/video/1
+            #EXTINF:-1,组播
+            udp://239.1.1.1:1234
+            #EXTINF:-1,回源
+            rtmp://cdn.example/live
+            """.trimIndent(),
+        ) as ReadyPlaylistImport
+
+        assertEquals(listOf("https://epg.example/ok.xml"), prepared.snapshot.epgUrls)
+        assertEquals(listOf("注入", "组播", "回源"), prepared.snapshot.channels.map { it.name })
+        val injected = prepared.snapshot.channels.first()
+        assertEquals("https://stream.example/live", injected.request.url)
+        assertFalse(injected.request.headers.containsKey("User-Agent"))
+        assertEquals("https://kept.example/", injected.request.headers["Referer"])
+        assertEquals("udp://239.1.1.1:1234", prepared.snapshot.channels[1].request.url)
+        assertEquals("rtmp://cdn.example/live", prepared.snapshot.channels[2].request.url)
+        assertTrue(prepared.summary.issueCodes.contains(ImportIssue.INVALID_URL))
+    }
+
     @Test fun sameNameDifferentTvgIdsGetDifferentStableIds() {
         val prepared = importer.prepare(
             """#EXTM3U
