@@ -98,7 +98,7 @@ class ReviewInstrumentation : Instrumentation() {
         check(!HubConfig.hasValidEndpoint(targetContext)) { "Historical preference enabled an unconfigured Hub" }
         check(hubPreferences.getString("endpoint", null) == previousEndpoint) { "Historical preference was changed" }
         check(runBlocking {
-            HubRefreshWorkerSupport.refresh(targetContext, repository, force = true, playbackActive = false)
+            HubRefreshWorkerSupport.refresh(targetContext, repository, force = true, playbackActive = { false })
         } == HubRefreshOutcome.Skipped("ENDPOINT_INVALID")) { "Unconfigured Hub refresh did not skip" }
 
         val activity = startActivitySync(Intent(targetContext, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))

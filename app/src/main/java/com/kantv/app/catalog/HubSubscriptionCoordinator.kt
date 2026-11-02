@@ -59,38 +59,60 @@ class HubSubscriptionCoordinator(
 ) {
     suspend fun refresh(
         force: Boolean = false,
-        playbackActive: Boolean = false,
+        playbackActive: () -> Boolean = { false },
         nowMs: Long = System.currentTimeMillis(),
     ): HubRefreshOutcome = withContext(Dispatchers.IO) {
-        val state = store.state()
-        if (!HubRefreshPolicy.shouldRefresh(state, nowMs, force)) {
-            // 未到点不访问网络，但停播后的待应用订阅已经在本地，直接补上。
-            if (HubRefreshPolicy.shouldApplyPending(state, playbackActive)) {
-                applyDeferredIfAny(nowMs)?.let { return@withContext it }
+        val prefetched = store.mutate {
+            val state = store.state()
+            if (!HubRefreshPolicy.shouldRefresh(state, nowMs, force)) {
+                // 未到点不访问网络，但停播后的待应用订阅已经在本地，直接补上。
+                val outcome = if (HubRefreshPolicy.shouldApplyPending(state, playbackActive())) {
+                    applyDeferredUnlocked(nowMs) ?: HubRefreshOutcome.Skipped("NOT_DUE")
+                } else {
+                    HubRefreshOutcome.Skipped("NOT_DUE")
+                }
+                Prefetch.Finished(outcome)
+            } else {
+                store.recordAttempt(nowMs)
+                Prefetch.Ready(state)
             }
-            return@withContext HubRefreshOutcome.Skipped("NOT_DUE")
         }
-        store.recordAttempt(nowMs)
+        val state = when (prefetched) {
+            is Prefetch.Finished -> return@withContext prefetched.outcome
+            is Prefetch.Ready -> prefetched.state
+        }
         val ifNoneMatch = if (HubRefreshPolicy.shouldOmitIfNoneMatch(state, nowMs)) {
             null
         } else {
             state.etag.takeIf { state.hasSuccessfulSubscription }
         }
         val outcome = client.fetch(ifNoneMatch = ifNoneMatch)
-        val decision = HubRefreshPolicy.decide(outcome, playbackActive, supportedSchema)
-        when (decision.action) {
-            HubApplyAction.KEEP_PREVIOUS -> {
-                val kept = keepPrevious(decision, outcome, nowMs)
-                // 304 / 失败都不带新正文。若播放已停、缓存里仍有未应用订阅，
-                // 这次响应不能把目录留在更旧的已应用版本上。
-                if (HubRefreshPolicy.shouldApplyPending(store.state(), playbackActive)) {
-                    applyDeferredIfAny(nowMs) ?: kept
-                } else {
-                    kept
+        // 播放状态和「有没有更新的尝试」都在响应落地时再看。请求发出时的快照会把
+        // 已经停播的订阅继续缓着，或让后返回的旧正文覆盖目录。
+        store.mutate {
+            if (nowMs < store.state().lastAttemptAtMs) {
+                HubRefreshOutcome.Skipped("STALE")
+            } else {
+                val playing = playbackActive()
+                val decision = HubRefreshPolicy.decide(outcome, playing, supportedSchema)
+                when (decision.action) {
+                    HubApplyAction.KEEP_PREVIOUS -> {
+                        val kept = keepPrevious(decision, outcome, nowMs)
+                        // 304 / 失败都不带新正文。若播放已停、缓存里仍有未应用订阅，
+                        // 这次响应不能把目录留在更旧的已应用版本上。
+                        if (HubRefreshPolicy.shouldApplyPending(store.state(), playbackActive())) {
+                            applyDeferredUnlocked(nowMs) ?: kept
+                        } else {
+                            kept
+                        }
+                    }
+                    HubApplyAction.APPLY -> apply(decision, nowMs, countCatalog = true)
+                    HubApplyAction.DEFER_UNTIL_PLAYBACK_STOPPED -> {
+                        val deferred = apply(decision, nowMs, countCatalog = false)
+                        if (playbackActive()) deferred else applyDeferredUnlocked(nowMs) ?: deferred
+                    }
                 }
             }
-            HubApplyAction.APPLY -> apply(decision, nowMs, countCatalog = true)
-            HubApplyAction.DEFER_UNTIL_PLAYBACK_STOPPED -> apply(decision, nowMs, countCatalog = false)
         }
     }
 
@@ -99,17 +121,26 @@ class HubSubscriptionCoordinator(
      * 无待应用内容时返回 null。
      */
     suspend fun applyDeferredIfAny(nowMs: Long = System.currentTimeMillis()): HubRefreshOutcome? = withContext(Dispatchers.IO) {
+        store.mutate { applyDeferredUnlocked(nowMs) }
+    }
+
+    private suspend fun applyDeferredUnlocked(nowMs: Long): HubRefreshOutcome? {
         val state = store.state()
-        val payload = state.payload ?: return@withContext null
+        val payload = state.payload ?: return null
         // seq 只跟产物 mtime。播放中缓存的新正文可能 seq 不变、ETag 已变，仍须补应用。
-        if (!state.hasPendingApply) return@withContext null
-        val parsed = HubSubscriptionParser.parse(payload) as? HubParseOutcome.Parsed ?: return@withContext null
+        if (!state.hasPendingApply) return null
+        val parsed = HubSubscriptionParser.parse(payload) as? HubParseOutcome.Parsed ?: return null
         if (parsed.subscription.hubSchema > supportedSchema) {
             onProtocolNote(schemaUnsupportedNotice(parsed.subscription.hubSchema))
             store.recordFailure(HubSubscriptionStatus.SCHEMA_UNSUPPORTED, nowMs)
-            return@withContext HubRefreshOutcome.SchemaUnsupported(parsed.subscription.hubSchema)
+            return HubRefreshOutcome.SchemaUnsupported(parsed.subscription.hubSchema)
         }
-        applyDecision(parsed.subscription, payload, state.etag, parsed.subscription.seq, nowMs, countCatalog = true)
+        return applyDecision(parsed.subscription, payload, state.etag, parsed.subscription.seq, nowMs, countCatalog = true)
+    }
+
+    private sealed interface Prefetch {
+        data class Finished(val outcome: HubRefreshOutcome) : Prefetch
+        data class Ready(val state: HubSubscriptionState) : Prefetch
     }
 
     /** §4 的 detail 只写协商事实，不含任何 URL / header / 凭据。 */

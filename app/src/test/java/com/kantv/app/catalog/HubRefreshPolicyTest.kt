@@ -264,7 +264,7 @@ class HubRefreshPolicyTest {
         val aliasCache = ChannelAliasCache(InMemoryChannelAliasPersistence())
         val coordinator = coordinator(transport, sink, store, aliasCache)
 
-        val deferred = coordinator.refresh(force = true, playbackActive = true, nowMs = 5_000L)
+        val deferred = coordinator.refresh(force = true, playbackActive = { true }, nowMs = 5_000L)
         assertEquals(HubRefreshOutcome.Deferred(42L), deferred)
         assertTrue(sink.applied.isEmpty())
         // 别名表也不得在播放中改写
@@ -288,7 +288,7 @@ class HubRefreshPolicyTest {
         val coordinator = coordinator(transport, sink, store)
 
         assertTrue(coordinator.refresh(force = true, nowMs = 1_000L) is HubRefreshOutcome.Applied)
-        val deferred = coordinator.refresh(force = true, playbackActive = true, nowMs = 2_000L)
+        val deferred = coordinator.refresh(force = true, playbackActive = { true }, nowMs = 2_000L)
         assertEquals(HubRefreshOutcome.Deferred(42L), deferred)
         assertEquals(1, sink.applied.size)
         assertEquals(42L, store.state().seq)
@@ -314,13 +314,13 @@ class HubRefreshPolicyTest {
         assertTrue(coordinator.refresh(force = true, nowMs = 1_000L) is HubRefreshOutcome.Applied)
         assertEquals(
             HubRefreshOutcome.Deferred(42L),
-            coordinator.refresh(force = true, playbackActive = true, nowMs = 2_000L),
+            coordinator.refresh(force = true, playbackActive = { true }, nowMs = 2_000L),
         )
         assertEquals(1, sink.applied.size)
         assertTrue(store.state().hasPendingApply)
 
         // 进程重启后播放标志已空，但距上次拉取还不到一小时。停播补应用不能干等下一次网络。
-        val caughtUp = coordinator.refresh(force = false, playbackActive = false, nowMs = 3_000L)
+        val caughtUp = coordinator.refresh(force = false, playbackActive = { false }, nowMs = 3_000L)
         assertTrue(caughtUp is HubRefreshOutcome.Applied)
         assertEquals(2, transport.calls)
         assertEquals(
@@ -341,8 +341,8 @@ class HubRefreshPolicyTest {
         val coordinator = coordinator(transport, sink, store)
 
         assertTrue(coordinator.refresh(force = true, nowMs = 1_000L) is HubRefreshOutcome.Applied)
-        coordinator.refresh(force = true, playbackActive = true, nowMs = 2_000L)
-        val stillPlaying = coordinator.refresh(force = false, playbackActive = true, nowMs = 3_000L)
+        coordinator.refresh(force = true, playbackActive = { true }, nowMs = 2_000L)
+        val stillPlaying = coordinator.refresh(force = false, playbackActive = { true }, nowMs = 3_000L)
         assertEquals(HubRefreshOutcome.Skipped("NOT_DUE"), stillPlaying)
         assertEquals(1, sink.applied.size)
         assertEquals(2, transport.calls)
@@ -363,12 +363,12 @@ class HubRefreshPolicyTest {
         assertTrue(coordinator.refresh(force = true, nowMs = 1_000L) is HubRefreshOutcome.Applied)
         assertEquals(
             HubRefreshOutcome.Deferred(42L),
-            coordinator.refresh(force = true, playbackActive = true, nowMs = 2_000L),
+            coordinator.refresh(force = true, playbackActive = { true }, nowMs = 2_000L),
         )
 
         // If-None-Match 对上的是尚未落目录的 ETag。304 只说明服务端没有更新的正文，
         // 目录里仍是上一份已应用订阅，必须把缓存补上，且不能再导入一次。
-        val caughtUp = coordinator.refresh(force = true, playbackActive = false, nowMs = 3_000L)
+        val caughtUp = coordinator.refresh(force = true, playbackActive = { false }, nowMs = 3_000L)
         assertTrue(caughtUp is HubRefreshOutcome.Applied)
         assertEquals(2, sink.applied.size)
         assertEquals(
@@ -391,8 +391,8 @@ class HubRefreshPolicyTest {
         val coordinator = coordinator(transport, sink, store)
 
         assertTrue(coordinator.refresh(force = true, nowMs = 1_000L) is HubRefreshOutcome.Applied)
-        coordinator.refresh(force = true, playbackActive = true, nowMs = 2_000L)
-        val duringPlayback = coordinator.refresh(force = true, playbackActive = true, nowMs = 3_000L)
+        coordinator.refresh(force = true, playbackActive = { true }, nowMs = 2_000L)
+        val duringPlayback = coordinator.refresh(force = true, playbackActive = { true }, nowMs = 3_000L)
         assertEquals(HubRefreshOutcome.Unchanged, duringPlayback)
         assertEquals(1, sink.applied.size)
         assertTrue(store.state().hasPendingApply)
@@ -410,8 +410,8 @@ class HubRefreshPolicyTest {
         val coordinator = coordinator(transport, sink, store)
 
         assertTrue(coordinator.refresh(force = true, nowMs = 1_000L) is HubRefreshOutcome.Applied)
-        coordinator.refresh(force = true, playbackActive = true, nowMs = 2_000L)
-        val caughtUp = coordinator.refresh(force = true, playbackActive = false, nowMs = 3_000L)
+        coordinator.refresh(force = true, playbackActive = { true }, nowMs = 2_000L)
+        val caughtUp = coordinator.refresh(force = true, playbackActive = { false }, nowMs = 3_000L)
         assertTrue(caughtUp is HubRefreshOutcome.Applied)
         assertEquals(
             "https://example.invalid/news.m3u8?sig=A&token=C",
@@ -438,6 +438,65 @@ class HubRefreshPolicyTest {
         val outcome = coordinator(transport, RecordingSink(), HubSubscriptionStore(InMemoryHubSubscriptionPersistence()))
             .refresh(force = true, nowMs = 8_000L)
         assertEquals(HubRefreshOutcome.Failed(HubSubscriptionStatus.CONTENT_TYPE_INVALID), outcome)
+    }
+
+    @Test fun `older in-flight refresh cannot replace a newer catalog`() = runBlocking {
+        val updated = PAYLOAD.replace("token=B", "token=C")
+        val transport = FakeTransport(
+            HubHttpResponse(code = 200, etag = "\"v2\"", contentType = "application/json", body = updated.toByteArray()),
+            HubHttpResponse(code = 200, etag = "\"v1\"", contentType = "application/json", body = PAYLOAD.toByteArray()),
+        )
+        val sink = RecordingSink()
+        val store = HubSubscriptionStore(InMemoryHubSubscriptionPersistence())
+        val coordinator = coordinator(transport, sink, store)
+
+        assertTrue(coordinator.refresh(force = true, nowMs = 5_000L) is HubRefreshOutcome.Applied)
+        // 后发出的请求先落地。先发出的响应不能把目录改回旧正文，否则 ETag 仍是新的，304 会把旧目录冻住。
+        val stale = coordinator.refresh(force = true, nowMs = 1_000L)
+        assertEquals(HubRefreshOutcome.Skipped("STALE"), stale)
+        assertEquals(1, sink.applied.size)
+        assertEquals(
+            "https://example.invalid/news.m3u8?sig=A&token=C",
+            sink.applied.single().channels.single().routes.single().url,
+        )
+        assertEquals("\"v2\"", store.state().etag)
+        assertEquals("\"v2\"", store.state().lastAppliedEtag)
+    }
+
+    @Test fun `playback that stops during the fetch is applied instead of deferred`() = runBlocking {
+        var playing = true
+        val transport = FakeTransport(
+            HubHttpResponse(code = 200, etag = "\"v1\"", contentType = "application/json", body = PAYLOAD.toByteArray()),
+            onRequest = { playing = false },
+        )
+        val sink = RecordingSink()
+        val store = HubSubscriptionStore(InMemoryHubSubscriptionPersistence())
+        val outcome = coordinator(transport, sink, store).refresh(
+            force = true,
+            playbackActive = { playing },
+            nowMs = 2_000L,
+        )
+        assertTrue(outcome is HubRefreshOutcome.Applied)
+        assertEquals(1, sink.applied.size)
+        assertFalse(store.state().hasPendingApply)
+    }
+
+    @Test fun `playback that starts during the fetch stays deferred`() = runBlocking {
+        var playing = false
+        val transport = FakeTransport(
+            HubHttpResponse(code = 200, etag = "\"v1\"", contentType = "application/json", body = PAYLOAD.toByteArray()),
+            onRequest = { playing = true },
+        )
+        val sink = RecordingSink()
+        val store = HubSubscriptionStore(InMemoryHubSubscriptionPersistence())
+        val outcome = coordinator(transport, sink, store).refresh(
+            force = true,
+            playbackActive = { playing },
+            nowMs = 2_000L,
+        )
+        assertEquals(HubRefreshOutcome.Deferred(42L), outcome)
+        assertTrue(sink.applied.isEmpty())
+        assertTrue(store.state().hasPendingApply)
     }
 
     @Test fun `not due refresh never touches the network`() = runBlocking {
@@ -476,12 +535,16 @@ class HubRefreshPolicyTest {
         onProtocolNote = onNote,
     )
 
-    private class FakeTransport(private vararg val responses: HubHttpResponse) : HubHttpTransport {
+    private class FakeTransport(
+        private vararg val responses: HubHttpResponse,
+        private val onRequest: () -> Unit = {},
+    ) : HubHttpTransport {
         val observedIfNoneMatch = mutableListOf<String?>()
         var calls = 0
             private set
 
         override fun get(uri: String, ifNoneMatch: String?): HubHttpResponse {
+            onRequest()
             observedIfNoneMatch += ifNoneMatch
             val response = responses.getOrElse(calls) { responses.lastOrNull() ?: HubHttpResponse(500) }
             calls++
