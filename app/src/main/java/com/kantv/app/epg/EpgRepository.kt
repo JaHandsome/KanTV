@@ -65,15 +65,27 @@ class DefaultEpgRepository(
             val signature = channelSignature(uniqueChannels)
             memoryEntry?.takeIf { memory ->
                 !forceRefresh && memory.channelSignature == signature &&
-                    nowMs - memory.guide.status.attemptedAtMs in 0..when (memory.guide.status.state) {
-                        EpgSourceState.NETWORK, EpgSourceState.CACHE -> freshForMs
-                        EpgSourceState.STALE_CACHE, EpgSourceState.UNAVAILABLE -> RETRY_COOLDOWN_MS
-                    }
+                    memoryStillFresh(memory.guide, nowMs)
             }?.let { return@withLock it.guide }
             val guide = loadSources(uniqueChannels, forceRefresh, nowMs)
             memoryEntry = MemoryGuide(signature, guide)
             guide
         }
+    }
+
+    /**
+     * 成功结果的新鲜度从抓取时刻算，不从这次读进内存的时刻算。
+     * 磁盘命中会把 [EpgLoadStatus.attemptedAtMs] 拨到读取时刻；用它计窗口的话，
+     * 冷启动或换一组频道会把已经接近过期的节目单再留一个完整周期。
+     * 失败结果仍按尝试时刻冷却，避免把陈旧节目单当成新的成功。
+     */
+    private fun memoryStillFresh(guide: EpgGuide, nowMs: Long): Boolean = when (guide.status.state) {
+        EpgSourceState.NETWORK, EpgSourceState.CACHE -> {
+            val successAt = guide.status.lastSuccessAtMs ?: return false
+            nowMs - successAt in 0..freshForMs
+        }
+        EpgSourceState.STALE_CACHE, EpgSourceState.UNAVAILABLE ->
+            nowMs - guide.status.attemptedAtMs in 0..RETRY_COOLDOWN_MS
     }
 
     private fun loadSources(

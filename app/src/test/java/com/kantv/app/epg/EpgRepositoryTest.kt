@@ -27,6 +27,23 @@ class EpgRepositoryTest {
         assertEquals(1, second.matchStats.matchedChannels)
     }
 
+    @Test fun memoryCacheDoesNotExtendFreshnessPastTheSourceSuccess() = runTest {
+        val client = FakeClient(mutableListOf(modified(), modified()))
+        val directory = temporaryFolder.newFolder()
+        val channel = EpgChannelRef("c1", "CCTV-1 综合", "CCTV 1")
+        val freshForMs = 1_000L
+        repository(directory, client, freshForMs).load(listOf(channel), nowMs = 1_000)
+
+        val restarted = repository(directory, client, freshForMs)
+        val diskHit = restarted.load(listOf(channel), nowMs = 1_900)
+        val expired = restarted.load(listOf(channel), nowMs = 1_000 + freshForMs + 1)
+
+        assertEquals(EpgSourceState.CACHE, diskHit.status.state)
+        assertEquals(1_000L, diskHit.status.lastSuccessAtMs)
+        assertEquals(EpgSourceState.NETWORK, expired.status.state)
+        assertEquals(2, client.calls.size)
+    }
+
     @Test fun serialMemoryReuseAvoidsRepeatedFetchAnd304RenewsFreshness() = runTest {
         val client = FakeClient(mutableListOf(modified(), EpgHttpResult.NotModified))
         val repository = repository(temporaryFolder.newFolder(), client, freshForMs = 100)
