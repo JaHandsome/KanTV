@@ -1530,7 +1530,9 @@ class Verifier(object):
                     'need_key': 0, 'need_client_cap': 0, 'timeout': False,
                     'circuit_open': False}
         log.info('验证轮: 取 %d 条候选 (预算 %.0f 分钟)', len(batch), budget_s / 60)
-        deadline = time.time() + budget_s
+        # 预算用单调钟。墙上时钟前跳会在第一条结果后把本轮掐掉并禁用熔断；
+        # 回拨则会把预算撑过整个批次，验证一直占着调度线程。
+        deadline = time.monotonic() + budget_s
         stats = {'batch': len(batch), 'ok': 0, 'abnormal': 0, 'fail': 0,
                  'unsupported': 0, 'need_key': 0, 'need_client_cap': 0, 'timeout': False,
                  'circuit_open': False}
@@ -1559,7 +1561,7 @@ class Verifier(object):
                         log.error('验证探测异常: %s', redact_exc(e))
                         continue
                     results.append((row, result, dur))
-                    if time.time() > deadline:
+                    if time.monotonic() > deadline:
                         stats['timeout'] = True
                         break
             finally:
