@@ -129,9 +129,9 @@ def media3_deliverable_route(container, encryption, drm, url=''):
 def collect_deliverable_lines(db, channels, max_lines, profiles=DELIVERABLE_PROFILES):
     """{channel_key: [line_row]} —— builder/hub 基础候选集的**唯一**取数实现。
 
-    lineups 优先（health 已重排的线路表）；`channels` 中某频道**过滤后不足
-    max_lines** 时回退直查 sources，按分数重选满额。只在过滤后已经满额时保留
-    lineups 的 rank 次序。两处均按同一口径过滤（与
+    lineups 优先（health 已重排的线路表）。过滤后已经满额，或快照里的行全部可投、
+    只是不足 max_lines 时，保留 rank，不把线外的源插进来。无效 route 占了名额，
+    或一条可投的都没有时，才回退 sources 按分数重选。两处均按同一口径过滤（与
     `health.rebuild_lineups` 写 lineups 的规则一致）：
 
     - `status='active' AND av LIKE 'video%'` —— lineups 只是重排的**快照**，
@@ -149,26 +149,29 @@ def collect_deliverable_lines(db, channels, max_lines, profiles=DELIVERABLE_PROF
     """
     marks = ','.join('?' * len(profiles))
     lines_by_key = {}
+    raw_count = {}
     for r in db.query(
             'SELECT l.channel_key AS k, l.rank AS rank, ' + _fields('s.') +
             ' FROM lineups l JOIN sources s ON s.id = l.source_id '
             "WHERE s.status='active' AND s.av LIKE 'video%%' "
             'AND s.profile IN (%s) ORDER BY l.channel_key, l.rank' % marks,
             tuple(profiles)):
+        raw_count[r['k']] = raw_count.get(r['k'], 0) + 1
         if media3_deliverable_route(r.get('container'), r.get('encryption'),
                                     r.get('drm'), r.get('url')) is None:
             continue
         lines = lines_by_key.setdefault(r['k'], [])
         if len(lines) < max_lines:
             lines.append(r)
-    # 过滤后凑不满 max_lines 的频道，一次取回再按频道截断。
-    # 无效 route 占满 lineups 名额时，不能只留下残缺的几条；满额才保留 rank。
-    # 与逐频道查询同序：score DESC, id ASC，且 route 过滤之后才数 max_lines。
+    # 无效 route 占了名额，或一条可投的都没有：按分数重选。
+    # 快照里的行全部可投、只是没排满：保持 rank，不把线外的源插进来。
     short = []
     seen_short = set()
     for key in channels:
         have = lines_by_key.get(key)
         if max_lines <= 0 or (have and len(have) >= max_lines) or key in seen_short:
+            continue
+        if have and raw_count.get(key, 0) == len(have):
             continue
         seen_short.add(key)
         short.append(key)
