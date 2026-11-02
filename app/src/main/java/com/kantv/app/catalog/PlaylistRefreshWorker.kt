@@ -33,7 +33,7 @@ class PlaylistRefreshWorker(
             context = applicationContext,
             repository = repository,
             force = force,
-            playbackActive = PlaybackActivityFlag.isActive(),
+            playbackActive = PlaybackActivityFlag::isActive,
         )
         PlaylistRefreshRunner.refresh(
             repository = repository,
@@ -75,7 +75,7 @@ internal object HubRefreshWorkerSupport {
         context: Context,
         repository: CatalogRepository,
         force: Boolean,
-        playbackActive: Boolean,
+        playbackActive: () -> Boolean,
         nowMs: Long = System.currentTimeMillis(),
     ): HubRefreshOutcome {
         val configuration = HubConfig.read(context)

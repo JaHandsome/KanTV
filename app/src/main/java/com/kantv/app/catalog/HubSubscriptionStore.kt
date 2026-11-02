@@ -1,6 +1,8 @@
 package com.kantv.app.catalog
 
 import android.content.Context
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.io.IOException
 import java.net.ConnectException
 import java.net.SocketTimeoutException
@@ -202,7 +204,15 @@ class SharedPreferencesHubSubscriptionPersistence internal constructor(
 class HubSubscriptionStore(
     private val persistence: HubSubscriptionPersistence = InMemoryHubSubscriptionPersistence(),
 ) {
+    private val mutation = Mutex()
+
     fun state(): HubSubscriptionState = persistence.read() ?: HubSubscriptionState()
+
+    /**
+     * 串行化「记下一次尝试」和「把响应写进目录」。
+     * 网络请求留在锁外；否则后返回的旧响应会在时间戳检查之后仍把目录改回去。
+     */
+    internal suspend fun <T> mutate(block: suspend () -> T): T = mutation.withLock { block() }
 
     /** 记录一次拉取尝试；新尝试时间戳更旧时忽略（过期响应不覆盖新结果）。 */
     fun recordAttempt(nowMs: Long): HubSubscriptionState {
