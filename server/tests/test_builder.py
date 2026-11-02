@@ -46,6 +46,29 @@ class TestBuilder(unittest.TestCase):
             'INSERT INTO lineups(channel_key, source_id, rank, updated_at) VALUES (?,?,?,?)',
             (key, sid, rank, utcnow()))
 
+    def test_other_profiles_do_not_keep_a_direct_lineup_short(self):
+        """need-key 占掉 lineups 名额时，direct 清单仍要补上名额之外的直链。"""
+        self.cfg.settings['limits']['max_lines_per_channel'] = 2
+        now = utcnow()
+
+        def add(url, digest, score, profile='direct'):
+            self.db.execute(
+                "INSERT INTO sources(url, url_hash, channel_name, channel_key, origin, status,"
+                " av, score, first_seen, last_seen, profile) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+                (url, digest, 'CCTV1', 'CCTV1', 'test', 'active', 'video', score, now, now, profile))
+            return self.db.query_one('SELECT id FROM sources WHERE url_hash=?', (digest,))['id']
+
+        blocked = add('http://x/need.mpd', 'need', 99, 'need-key')
+        low = add('http://x/low', 'low', 5)
+        add('http://x/high', 'high', 50)
+        self._add_lineup('CCTV1', blocked, 0)
+        self._add_lineup('CCTV1', low, 1)
+        OutputBuilder(self.cfg, self.db).build()
+        with open(os.path.join(self.cfg.output_dir, 'live.txt'), encoding='utf-8') as handle:
+            txt = handle.read()
+        self.assertIn('CCTV1,http://x/low#http://x/high\n', txt)
+        self.assertNotIn('need.mpd', txt)
+
     def test_output_format_compatible(self):
         """2 频道 3 线路 -> live.txt/live.m3u 与旧脚本格式逐行一致。"""
         # CCTV1: 2 条线路（rank 顺序即 '#' 拼接顺序）
