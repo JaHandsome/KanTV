@@ -257,7 +257,9 @@ class HubSubscriptionStore(
             etag = resolvedEtag,
             seq = seq,
             payload = payload,
-            lastAttemptAtMs = nowMs,
+            // 尝试时钟只由 recordAttempt 推进。补应用的墙钟更晚，若写进 lastAttempt，
+            // 会把已经在路上的那次刷新判成过期响应丢掉。
+            lastAttemptAtMs = previous.lastAttemptAtMs.takeIf { it > 0L } ?: nowMs,
             lastSuccessAtMs = nowMs,
             lastAppliedSeq = if (applied) seq else previous.lastAppliedSeq,
             lastAppliedEtag = if (applied) resolvedEtag else previous.lastAppliedEtag,
