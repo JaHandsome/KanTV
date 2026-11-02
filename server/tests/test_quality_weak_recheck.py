@@ -154,9 +154,23 @@ class TestBlacklistRecheck(_Base):
                       score=70, last_verified=old)
         insert_source(self.db, 'http://203.0.113.12/z.m3u8', key='K3',
                       status='blacklisted', score=50, last_verified=old)
+        calls = []
+        real = self.db.query
+
+        def wrapped(sql, params=()):
+            calls.append(sql)
+            return real(sql, params)
+
+        self.db.query = wrapped
         picked = self.v._select_blacklist_recheck(2)
         self.assertEqual([r['url'] for r in picked], [self.STALE2,
                                                       'http://203.0.113.12/z.m3u8'])
+        self.assertEqual(len(calls), 2)
+        self.assertIn('SELECT id, url FROM sources', calls[0])
+        self.assertNotIn('drm_key', calls[0])
+        self.assertIn('SELECT * FROM sources WHERE id IN', calls[1])
+        self.assertEqual(picked[0]['status'], 'blacklisted')
+        self.assertIn('drm_key', picked[0])
 
     def test_fresh_last_verified_skipped(self):
         insert_source(self.db, self.STALE, key='K1', status='blacklisted',

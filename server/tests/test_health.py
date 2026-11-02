@@ -163,6 +163,27 @@ class TestHealth(unittest.TestCase):
         self.assertEqual(rows[0]['source_id'], s1)      # score 高的排 rank 0
         self.assertEqual(rows[0]['rank'], 0)
 
+    def test_probe_query_skips_unused_columns(self):
+        """探活轮只取状态机用到的列，不把 drm_key 放进并发任务。"""
+        sid = self._add('http://x/narrow')
+        calls = []
+        real = self.db.query
+
+        def wrapped(sql, params=()):
+            calls.append((sql, params))
+            return real(sql, params)
+
+        self.db.query = wrapped
+        self._monitor(['http://x/narrow']).run()
+        probe = [c for c in calls if 'status IN' in c[0]]
+        self.assertEqual(len(probe), 1)
+        sql, params = probe[0]
+        self.assertNotIn('*', sql)
+        self.assertNotIn('drm_key', sql)
+        self.assertIn('fail_streak', sql)
+        self.assertEqual(params, ('active', 'flaky', 'dead'))
+        self.assertEqual(self._status(sid)['ok_streak'], 1)
+
     def test_probe_round_meta_increments(self):
         self._monitor([]).run()
         r1 = int(self.db.get_meta('probe_round'))

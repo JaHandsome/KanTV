@@ -446,6 +446,17 @@ class HealthMonitor(object):
                     'VALUES (?,?,?,?)',
                     [(key, c['id'], i, now) for i, c in enumerate(cands)])
 
+    # 探活只读这些列。整行里的 drm_key / 媒体快照不参与存活判定，
+    # 每轮带上只会把内联密钥放进并发任务。
+    _PROBE_COLUMNS = 'id, url, status, fail_streak, ok_streak'
+
+    def _probe_targets(self, statuses):
+        marks = ','.join('?' * len(statuses))
+        return self.db.query(
+            'SELECT ' + self._PROBE_COLUMNS + ' FROM sources WHERE status IN (%s) '
+            "AND channel_key != ''" % marks,
+            tuple(statuses))
+
     # ---------- 主流程 ----------
     def run(self):
         """一轮探活：active/flaky 全量 + dead 低频复探 -> 状态机 -> 线路重排。"""
@@ -458,13 +469,9 @@ class HealthMonitor(object):
         if include_dead:
             # P0 修复：channel_key != '' 与 verifier 对齐——非目标频道的源
             # 永远进不了 lineups（builder 只按 channels 清单取），探活它们纯浪费预算
-            targets = self.db.query(
-                "SELECT * FROM sources WHERE status IN ('active','flaky','dead') "
-                "AND channel_key != ''")
+            targets = self._probe_targets(('active', 'flaky', 'dead'))
         else:
-            targets = self.db.query(
-                "SELECT * FROM sources WHERE status IN ('active','flaky') "
-                "AND channel_key != ''")
+            targets = self._probe_targets(('active', 'flaky'))
         if not targets:
             log.info('探活轮 %d: 无目标源', rnd)
             self.rebuild_lineups()
