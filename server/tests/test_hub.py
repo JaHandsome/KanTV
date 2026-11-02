@@ -345,6 +345,19 @@ class TestSubscription(unittest.TestCase):
         finally:
             shutil.rmtree(root, ignore_errors=True)
 
+    def test_subscription_log_keeps_query_text_on_one_line(self):
+        """未鉴权的 client/app 查询参数带换行时，不得在审计日志里另起一条。"""
+        with self.assertLogs('hub', level='INFO') as captured:
+            self.hub.build_subscription(
+                caps='hls-ts', schema='99',
+                client='tv\nERROR [hub] forged-subscription',
+                app='app\r\nforged-app',
+            )
+        self.assertTrue(captured.output)
+        for message in captured.output:
+            self.assertNotIn('\n', message)
+            self.assertNotIn('\r', message)
+
 
 # ============================ 投递路由过滤（与 Builder 同源）============================
 class TestHubDeliveryRouteFilter(unittest.TestCase):
@@ -419,6 +432,21 @@ class TestFeedback(unittest.TestCase):
              'session': 'sess-1', 'reported_at': '2026-09-11T19:05:00+08:00',
              'results': [r]}
         return p
+
+    def test_feedback_log_keeps_client_and_url_key_on_one_line(self):
+        """回流里的 client / url_key 带换行时，警告和汇总仍是一条日志。"""
+        payload = self._payload(
+            client='tv\nERROR [hub] forged-feedback',
+            url_key='ab\nERROR forged-key',
+            active_seconds=1,
+        )
+        payload['client'] = 'tv\nERROR [hub] forged-feedback'
+        with self.assertLogs('hub', level='INFO') as captured:
+            self.hub.record_feedback(payload)
+        self.assertTrue(captured.output)
+        for message in captured.output:
+            self.assertNotIn('\n', message)
+            self.assertNotIn('\r', message)
 
     def test_正常落库(self):
         out = self.hub.record_feedback(self._payload())
