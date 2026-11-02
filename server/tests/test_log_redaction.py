@@ -74,6 +74,42 @@ class TestRedactUrl(unittest.TestCase):
         self.assertEqual(safe, '"GET /live.m3u HTTP/1.1" 200 -')
         self.assertNotIn(SECRET, safe)
 
+    def test_access_line_control_character_drops_forged_tail(self):
+        """请求行中间的控制字符会截断 \\S 匹配，后面的伪造行和 query 不能留下。"""
+        for control in ('\r', '\n', '\x00', '\x0b', '\x7f', '\x85', '\xa0'):
+            raw = (
+                '"GET /foo%s10.0.0.2 - "GET /admin?token=%s HTTP/1.1" 200 -" HTTP/1.1" 200 -'
+                % (control, SECRET)
+            )
+            safe = redact_access_message(raw)
+            self.assertNotIn(control, safe)
+            self.assertNotIn(SECRET, safe)
+            self.assertNotIn('admin', safe)
+            self.assertNotIn('\r', safe)
+            self.assertNotIn('\n', safe)
+            self.assertIn('/foo', safe)
+
+    def test_syntax_error_line_drops_query_and_userinfo(self):
+        """语法错误走 %r，单引号里的 query 和 userinfo 也要丢掉。"""
+        query = (
+            "code 400, message Bad request syntax ('GET /live.txt?token=%s oops HTTP/1.1')"
+            % SECRET
+        )
+        safe_query = redact_access_message(query)
+        self.assertIn('/live.txt', safe_query)
+        self.assertNotIn(SECRET, safe_query)
+        self.assertNotIn('token=', safe_query)
+        self.assertNotIn('?', safe_query)
+
+        userinfo = (
+            "code 400, message Bad request syntax "
+            "('GET http://user:%s@cdn.example/a extra HTTP/1.1')" % SECRET
+        )
+        safe_user = redact_access_message(userinfo)
+        self.assertIn('http://cdn.example/a', safe_user)
+        self.assertNotIn(SECRET, safe_user)
+        self.assertNotIn('user:', safe_user)
+
     def test_live_access_log_does_not_keep_query_token(self):
         import logging
         import tempfile
@@ -114,6 +150,67 @@ class TestRedactUrl(unittest.TestCase):
         self.assertIn('/live.txt', joined)
         self.assertNotIn(SECRET, joined)
         self.assertNotIn('token=', joined)
+
+    def test_live_access_log_drops_forged_tail_and_syntax_error_secret(self):
+        import logging
+        import socket
+        import tempfile
+        import threading
+        from app.httpserver import _BoundedHTTPServer, _make_handler
+
+        records = []
+
+        class Capture(logging.Handler):
+            def emit(self, record):
+                records.append(record.getMessage())
+
+        logger = logging.getLogger('http')
+        capture = Capture()
+        logger.addHandler(capture)
+        logger.setLevel(logging.INFO)
+        payloads = (
+            b'GET /foo\rGET /admin?token=' + SECRET.encode('ascii')
+            + b' HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n',
+            b'GET /live.txt?token=' + SECRET.encode('ascii')
+            + b' oops HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n',
+            b'GET http://user:' + SECRET.encode('ascii')
+            + b'@cdn.example/a extra HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n',
+        )
+        try:
+            with tempfile.TemporaryDirectory() as output:
+                server = _BoundedHTTPServer(('127.0.0.1', 0), _make_handler(output, None))
+                thread = threading.Thread(target=server.serve_forever, daemon=True)
+                thread.start()
+                try:
+                    for payload in payloads:
+                        sock = socket.create_connection(server.server_address, timeout=5)
+                        try:
+                            sock.sendall(payload)
+                            sock.settimeout(2)
+                            try:
+                                while sock.recv(4096):
+                                    pass
+                            except socket.timeout:
+                                pass
+                        finally:
+                            sock.close()
+                finally:
+                    server.shutdown()
+                    server.server_close()
+                    thread.join(timeout=5)
+        finally:
+            logger.removeHandler(capture)
+        self.assertTrue(records)
+        joined = '\n'.join(records)
+        self.assertIn('/foo', joined)
+        self.assertIn('/live.txt', joined)
+        self.assertIn('cdn.example', joined)
+        self.assertNotIn(SECRET, joined)
+        self.assertNotIn('token=', joined)
+        self.assertNotIn('user:', joined)
+        for message in records:
+            self.assertNotIn('\r', message)
+            self.assertNotIn('\n', message)
 
     def test_exception_text_drops_redirect_token_stream_url_and_newlines(self):
         import urllib.error

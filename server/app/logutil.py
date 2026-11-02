@@ -111,6 +111,8 @@ _REQUEST_TARGET = re.compile(
     r'"((?:GET|HEAD|POST|PUT|DELETE|OPTIONS|PATCH)\s+)(\S+)',
     re.IGNORECASE,
 )
+# 在空格、单引号、双引号处停下，避免把后面的 HTTP 版本或 %r 的引号吃掉。
+_QUERY_OR_FRAGMENT = re.compile(r'[?#][^ \'"]*')
 
 
 def redact_request_target(target):
@@ -129,8 +131,22 @@ def redact_request_target(target):
 
 
 def redact_access_message(message):
-    """访问日志整行：把引号里的 request-target 换成无 query 的 path。"""
+    """访问日志整行：去掉 query，并在控制字符处截断。
+
+    请求行只剥掉末尾的 CR/LF。中间的 C0、DEL，或 NEL/NBSP 这类非空格空白，
+    会让请求目标的匹配提前结束，伪造的后半行和 query 原样留下；CR 还会盖住同一条审计。
+    语法错误另外记 ``Bad request syntax (%r)``：控制字符已被转义，但单引号里的
+    query 和 userinfo 匹配不到请求目标正则。先截断，再去掉剩余文本的 query、
+    fragment，以及绝对 URL 里的 userinfo。正常行没有这些字符，结果不变。
+    """
     text = message if isinstance(message, str) else str(message)
+    for index, ch in enumerate(text):
+        code = ord(ch)
+        if code < 32 or code == 127 or (ch.isspace() and ch != ' '):
+            text = text[:index]
+            break
+    text = _QUERY_OR_FRAGMENT.sub('', text)
+    text = redact_text(text)
 
     def replace(match):
         return '"%s%s' % (match.group(1), redact_request_target(match.group(2)))
