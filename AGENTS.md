@@ -8,6 +8,19 @@ KanTV is a single-module Android TV application. Production Kotlin code lives in
 
 Local unit tests mirror the production packages in `app/src/test/java`. Variant-specific code is isolated in `app/src/debug`, `app/src/diagnostic`, `app/src/release`, `app/src/tvAcceptance`, and `app/src/tvbGeckoProbe`. Keep product decisions and validation records in `docs/`, browser-only interaction samples in `prototype/`, and repeatable analysis utilities in `tools/`. `reference/` and `.tools/` contain local research material and are intentionally ignored.
 
+## 工程原则
+
+- 不保留向后兼容：旧写法/旧接口该删就删。底线：数据和数据库结构的改动先备份或先问。
+- 选最简单的实现。
+- 系统分层生长：先做基础层，需要再加。
+- 组件模块化，每块只管一件事。
+- 优先用成熟库，不重复造轮子。
+- 加新依赖前先查现有依赖能不能用。
+- 架构决策看长远。
+- 拿不准时参考成熟产品的做法。
+
+以上原则不覆盖、不放宽本文其余条款。删除旧写法或旧接口时，既有的 Deployment Authorization、播放稳定基线（含回滚产物、基线 APK / 源码归档与验收证据保留，以及未验收不得替换家庭稳定更新入口）、Hub 合同 v1.1 及其变更门禁、`server/` 仅用 Python 3 标准库且零 pip 依赖，以及 NAS / 生产部署授权仍然优先。
+
 ## Build, Test, and Development Commands
 
 - `./gradlew :app:testDebugUnitTest` runs the JUnit 4 unit-test suite.
